@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useCurrentTime } from '@/hooks/useCurrentTime';
-import { CalendarDays, Zap } from 'lucide-react';
+import { CalendarDays, Zap, Sparkles } from 'lucide-react';
 
 export const Header = () => {
   const { timeString, currentTime } = useCurrentTime();
@@ -20,9 +20,27 @@ export const Header = () => {
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-info flex items-center justify-center shadow-glow">
+            <motion.div 
+              className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-info flex items-center justify-center shadow-glow"
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <Zap className="w-5 h-5 text-primary-foreground" />
-            </div>
+              <motion.div
+                className="absolute -top-1 -right-1"
+                animate={{ 
+                  scale: [1, 1.2, 1],
+                  rotate: [0, 180, 360],
+                }}
+                transition={{ 
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                <Sparkles className="w-3 h-3 text-warning" />
+              </motion.div>
+            </motion.div>
             <div>
               <h1 className="text-xl font-bold gradient-text">SmartSchedule</h1>
               <p className="text-xs text-muted-foreground">Your productivity coach</p>
@@ -34,15 +52,29 @@ export const Header = () => {
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-6"
           >
-            <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
+            <motion.div 
+              className="hidden sm:flex items-center gap-2 text-muted-foreground px-3 py-1.5 rounded-lg bg-secondary/50"
+              whileHover={{ scale: 1.02 }}
+            >
               <CalendarDays className="w-4 h-4" />
               <span className="text-sm">{formattedDate}</span>
-            </div>
+            </motion.div>
             
-            <div className="text-right">
-              <p className="text-2xl font-bold text-foreground tabular-nums">{timeString}</p>
+            <motion.div 
+              className="text-right px-4 py-2 rounded-xl glass"
+              whileHover={{ scale: 1.02 }}
+            >
+              <motion.p 
+                className="text-2xl font-bold text-foreground tabular-nums"
+                key={timeString}
+                initial={{ opacity: 0.5, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {timeString}
+              </motion.p>
               <p className="text-xs text-muted-foreground">Current Time</p>
-            </div>
+            </motion.div>
           </motion.div>
         </div>
       </div>

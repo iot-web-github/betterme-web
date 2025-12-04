@@ -1,26 +1,28 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { format } from 'date-fns';
 import { Header } from '@/components/layout/Header';
 import { DateSelector } from '@/components/layout/DateSelector';
-import { DraggableTimeline } from '@/components/schedule/DraggableTimeline';
+import { EnhancedTimeline } from '@/components/schedule/EnhancedTimeline';
 import { TaskForm } from '@/components/schedule/TaskForm';
 import { TaskDetailSheet } from '@/components/schedule/TaskDetailSheet';
-import { StatsCard } from '@/components/dashboard/StatsCard';
+import { DailyScheduleManager } from '@/components/schedule/DailyScheduleManager';
 import { ProductivityScore } from '@/components/dashboard/ProductivityScore';
 import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
 import { StreakCard } from '@/components/dashboard/StreakCard';
-import { AchievementsCard } from '@/components/dashboard/AchievementsCard';
-import { WeeklyOverview } from '@/components/dashboard/WeeklyOverview';
 import { QuickStats } from '@/components/dashboard/QuickStats';
+import { MiniCalendar } from '@/components/dashboard/MiniCalendar';
 import { WeeklyView } from '@/components/views/WeeklyView';
+import { MonthlyView } from '@/components/views/MonthlyView';
 import { useSchedule } from '@/hooks/useSchedule';
 import { useStreaks } from '@/hooks/useStreaks';
-import { Task } from '@/types/schedule';
+import { useDailySchedule } from '@/hooks/useDailySchedule';
+import { Task, ScheduleTemplate } from '@/types/schedule';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, CheckCircle2, XCircle, Clock, Target, Calendar, LayoutGrid } from 'lucide-react';
+import { Plus, Clock, Calendar, CalendarDays, LayoutGrid } from 'lucide-react';
 
-type ViewMode = 'day' | 'week';
+type ViewMode = 'day' | 'week' | 'month';
 
 const Index = () => {
   const [selectedDate, setSelectedDate] = useState(
@@ -30,6 +32,7 @@ const Index = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('day');
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const {
     tasks,
@@ -41,7 +44,15 @@ const Index = () => {
     dailyStats,
   } = useSchedule(selectedDate);
 
-  const { streakData, achievements, unlockedCount, totalAchievements } = useStreaks(allTasks);
+  const { streakData } = useStreaks(allTasks);
+
+  const {
+    templates,
+    addTemplate,
+    deleteTemplate,
+    toggleTemplateActive,
+    getTemplatesForDay,
+  } = useDailySchedule();
 
   const handleAddTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => {
     addTask(taskData);
@@ -84,9 +95,39 @@ const Index = () => {
     setEditingTask(null);
   };
 
-  const handleReorderTasks = (reorderedTasks: Task[]) => {
-    // For now, tasks are sorted by time, reordering would update times
-    console.log('Reorder tasks:', reorderedTasks);
+  const handleMarkTask = (taskId: string, status: 'completed' | 'completed-on-time' | 'missed') => {
+    updateTaskStatus(taskId, status);
+  };
+
+  const handleApplyTemplates = (templatesToApply: ScheduleTemplate[]) => {
+    const dayOfWeek = new Date(selectedDate).getDay();
+    const relevantTemplates = templatesToApply.filter(t => t.daysOfWeek.includes(dayOfWeek));
+    
+    relevantTemplates.forEach(template => {
+      // Check if task already exists from this template today
+      const existingTask = tasks.find(t => 
+        t.templateId === template.id && t.date === selectedDate
+      );
+      
+      if (!existingTask) {
+        addTask({
+          title: template.title,
+          startTime: template.startTime,
+          endTime: template.endTime,
+          category: template.category,
+          priority: template.priority,
+          description: template.description,
+          date: selectedDate,
+          isFromTemplate: true,
+          templateId: template.id,
+        });
+      }
+    });
+  };
+
+  const handleDateSelectFromMonth = (date: string) => {
+    setSelectedDate(date);
+    setViewMode('day');
   };
 
   return (
@@ -94,7 +135,7 @@ const Index = () => {
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* View Toggle & Date Selector */}
+        {/* Top Bar: View Toggle & Date Selector */}
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -103,40 +144,49 @@ const Index = () => {
           <DateSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
           
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-            <TabsList className="glass">
-              <TabsTrigger value="day" className="gap-2">
+            <TabsList className="glass border border-border/30">
+              <TabsTrigger value="day" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <LayoutGrid className="w-4 h-4" />
-                Day
+                <span className="hidden sm:inline">Day</span>
               </TabsTrigger>
-              <TabsTrigger value="week" className="gap-2">
+              <TabsTrigger value="week" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Calendar className="w-4 h-4" />
-                Week
+                <span className="hidden sm:inline">Week</span>
+              </TabsTrigger>
+              <TabsTrigger value="month" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <CalendarDays className="w-4 h-4" />
+                <span className="hidden sm:inline">Month</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
         </motion.div>
 
-        <div className="grid lg:grid-cols-[1fr,340px] gap-6">
+        <div className="grid lg:grid-cols-[1fr,360px] gap-6">
           {/* Main Content */}
           <div className="space-y-6">
             <AnimatePresence mode="wait">
-              {viewMode === 'day' ? (
+              {viewMode === 'day' && (
                 <motion.div
                   key="day-view"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.2 }}
-                  className="glass rounded-xl p-6 hover-lift"
+                  transition={{ duration: 0.25 }}
+                  className="glass rounded-2xl p-6"
                 >
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <h2 className="text-lg font-semibold text-foreground">Daily Schedule</h2>
+                      <h2 className="text-xl font-display font-bold text-foreground">
+                        {format(new Date(selectedDate), 'EEEE')}
+                      </h2>
                       <p className="text-sm text-muted-foreground">
-                        {tasks.length} tasks planned
+                        {tasks.length} task{tasks.length !== 1 && 's'} • {format(new Date(selectedDate), 'MMMM d, yyyy')}
                       </p>
                     </div>
-                    <Button variant="glow" onClick={() => setShowTaskForm(true)} className="gap-2">
+                    <Button 
+                      onClick={() => setShowTaskForm(true)} 
+                      className="gap-2 bg-primary hover:bg-primary/90"
+                    >
                       <Plus className="w-4 h-4" />
                       Add Task
                     </Button>
@@ -145,46 +195,53 @@ const Index = () => {
                   <div className="h-[600px] overflow-y-auto scrollbar-thin pr-2">
                     {tasks.length === 0 ? (
                       <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="flex flex-col items-center justify-center h-full text-center"
                       >
                         <motion.div 
-                          className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4"
+                          className="w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center mb-4"
                           animate={{ 
                             scale: [1, 1.05, 1],
-                            rotate: [0, 5, -5, 0] 
+                            rotate: [0, 3, -3, 0] 
                           }}
-                          transition={{ duration: 2, repeat: Infinity }}
+                          transition={{ duration: 3, repeat: Infinity }}
                         >
                           <Clock className="w-10 h-10 text-muted-foreground" />
                         </motion.div>
-                        <h3 className="text-lg font-medium text-foreground mb-2">No tasks yet</h3>
+                        <h3 className="text-lg font-display font-semibold text-foreground mb-2">
+                          No tasks scheduled
+                        </h3>
                         <p className="text-sm text-muted-foreground mb-4 max-w-xs">
-                          Start planning your day by adding your first task and build your streak!
+                          Start planning your day by adding tasks or applying your daily routine
                         </p>
-                        <Button variant="outline" onClick={() => setShowTaskForm(true)} className="gap-2">
-                          <Plus className="w-4 h-4" />
-                          Add Your First Task
-                        </Button>
+                        <div className="flex gap-3">
+                          <Button variant="outline" onClick={() => setShowTaskForm(true)} className="gap-2">
+                            <Plus className="w-4 h-4" />
+                            Add Task
+                          </Button>
+                        </div>
                       </motion.div>
                     ) : (
-                      <DraggableTimeline
+                      <EnhancedTimeline
                         tasks={tasks}
+                        templates={templates}
                         onTaskClick={handleTaskClick}
-                        onReorder={handleReorderTasks}
+                        onMarkTask={handleMarkTask}
                         selectedDate={selectedDate}
                       />
                     )}
                   </div>
                 </motion.div>
-              ) : (
+              )}
+
+              {viewMode === 'week' && (
                 <motion.div
                   key="week-view"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.25 }}
                 >
                   <WeeklyView
                     tasks={allTasks}
@@ -194,70 +251,58 @@ const Index = () => {
                   />
                 </motion.div>
               )}
+
+              {viewMode === 'month' && (
+                <motion.div
+                  key="month-view"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <MonthlyView
+                    tasks={allTasks}
+                    selectedDate={selectedDate}
+                    onDateSelect={handleDateSelectFromMonth}
+                    onMonthChange={setCurrentMonth}
+                    currentMonth={currentMonth}
+                  />
+                </motion.div>
+              )}
             </AnimatePresence>
 
-            {/* Weekly Overview - Only show on day view */}
+            {/* Daily Schedule Manager - Show only in day view */}
             {viewMode === 'day' && (
-              <WeeklyOverview 
-                tasks={allTasks} 
-                selectedDate={selectedDate} 
-                onDateSelect={setSelectedDate} 
+              <DailyScheduleManager
+                templates={templates}
+                onAddTemplate={addTemplate}
+                onDeleteTemplate={deleteTemplate}
+                onToggleActive={toggleTemplateActive}
+                onApplyToday={handleApplyTemplates}
               />
             )}
           </div>
 
-          {/* Sidebar - Stats & Gamification */}
+          {/* Sidebar */}
           <div className="space-y-4">
+            {/* Mini Calendar */}
+            <MiniCalendar
+              tasks={allTasks}
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+            />
+
             {/* Streak Card */}
             <StreakCard streakData={streakData} />
             
             {/* Productivity Score */}
             <ProductivityScore score={dailyStats.productivityScore} />
             
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-3">
-              <StatsCard
-                title="Total"
-                value={dailyStats.totalTasks}
-                icon={Target}
-                variant="default"
-                delay={0.1}
-              />
-              <StatsCard
-                title="Completed"
-                value={dailyStats.completedTasks}
-                icon={CheckCircle2}
-                variant="success"
-                delay={0.15}
-              />
-              <StatsCard
-                title="On-Time"
-                value={dailyStats.completedOnTime}
-                icon={Clock}
-                variant="primary"
-                delay={0.2}
-              />
-              <StatsCard
-                title="Missed"
-                value={dailyStats.missedTasks}
-                icon={XCircle}
-                variant="destructive"
-                delay={0.25}
-              />
-            </div>
-
             {/* Quick Stats */}
             <QuickStats 
               dailyStats={dailyStats} 
               allTasks={allTasks} 
               selectedDate={selectedDate} 
-            />
-
-            {/* Achievements */}
-            <AchievementsCard 
-              achievements={achievements} 
-              unlockedCount={unlockedCount} 
-              totalAchievements={totalAchievements} 
             />
 
             {/* Category Breakdown */}

@@ -13,8 +13,22 @@ export interface Task {
   status: TaskStatus;
   date: string; // YYYY-MM-DD format
   notes?: string;
+  isFromTemplate?: boolean;
+  templateId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ScheduleTemplate {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  category: TaskCategory;
+  priority: TaskPriority;
+  description?: string;
+  isActive: boolean;
+  daysOfWeek: number[]; // 0-6, Sunday-Saturday
 }
 
 export interface DailyStats {
@@ -36,6 +50,15 @@ export const CATEGORY_LABELS: Record<TaskCategory, string> = {
   other: 'Other',
 };
 
+export const CATEGORY_ICONS: Record<TaskCategory, string> = {
+  work: '💼',
+  personal: '🏠',
+  health: '💪',
+  learning: '📚',
+  social: '👥',
+  other: '📌',
+};
+
 export const PRIORITY_LABELS: Record<TaskPriority, string> = {
   high: 'High',
   medium: 'Medium',
@@ -45,7 +68,9 @@ export const PRIORITY_LABELS: Record<TaskPriority, string> = {
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   pending: 'Pending',
   completed: 'Completed',
-  'completed-on-time': 'Completed On-Time',
+  'completed-on-time': 'On-Time',
   missed: 'Missed',
   rescheduled: 'Rescheduled',
 };
+
+export const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

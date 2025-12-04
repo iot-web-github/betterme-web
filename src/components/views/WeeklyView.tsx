@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
-import { Task, CATEGORY_LABELS } from '@/types/schedule';
+import { Task, CATEGORY_ICONS } from '@/types/schedule';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, Circle } from 'lucide-react';
 
 interface WeeklyViewProps {
   tasks: Task[];
@@ -12,12 +12,12 @@ interface WeeklyViewProps {
 }
 
 const categoryColors: Record<string, string> = {
-  work: 'bg-category-work/20 border-category-work',
-  personal: 'bg-category-personal/20 border-category-personal',
-  health: 'bg-category-health/20 border-category-health',
-  learning: 'bg-category-learning/20 border-category-learning',
-  social: 'bg-category-social/20 border-category-social',
-  other: 'bg-category-other/20 border-category-other',
+  work: 'bg-category-work/20 border-l-category-work',
+  personal: 'bg-category-personal/20 border-l-category-personal',
+  health: 'bg-category-health/20 border-l-category-health',
+  learning: 'bg-category-learning/20 border-l-category-learning',
+  social: 'bg-category-social/20 border-l-category-social',
+  other: 'bg-category-other/20 border-l-category-other',
 };
 
 export const WeeklyView = ({ 
@@ -46,17 +46,17 @@ export const WeeklyView = ({
     };
   });
 
-  const hours = Array.from({ length: 16 }, (_, i) => i + 6); // 6 AM to 9 PM
+  const hours = Array.from({ length: 15 }, (_, i) => i + 6); // 6 AM to 8 PM
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="glass rounded-xl overflow-hidden"
+      className="glass rounded-2xl overflow-hidden"
     >
       {/* Header */}
-      <div className="grid grid-cols-8 border-b border-border">
-        <div className="p-3 text-xs text-muted-foreground">Time</div>
+      <div className="grid grid-cols-8 border-b border-border/30">
+        <div className="p-4 text-xs font-medium text-muted-foreground uppercase">Time</div>
         {weekDays.map((day, index) => (
           <motion.button
             key={day.dateStr}
@@ -65,14 +65,14 @@ export const WeeklyView = ({
             transition={{ delay: index * 0.03 }}
             onClick={() => onDateSelect(day.dateStr)}
             className={cn(
-              "p-3 text-center transition-colors border-l border-border",
+              "p-4 text-center transition-all border-l border-border/30",
               day.isSelected && "bg-primary/10",
               day.isToday && "bg-success/5"
             )}
           >
-            <div className="text-xs text-muted-foreground uppercase">{day.dayName}</div>
+            <div className="text-xs text-muted-foreground uppercase mb-1">{day.dayName}</div>
             <div className={cn(
-              "text-lg font-bold",
+              "text-xl font-display font-bold",
               day.isSelected ? "text-primary" : day.isToday ? "text-success" : "text-foreground"
             )}>
               {day.dayNumber}
@@ -85,8 +85,8 @@ export const WeeklyView = ({
       <div className="max-h-[500px] overflow-y-auto scrollbar-thin">
         <div className="relative">
           {hours.map((hour) => (
-            <div key={hour} className="grid grid-cols-8 h-16 border-b border-border/30">
-              <div className="p-2 text-xs text-muted-foreground flex items-start">
+            <div key={hour} className="grid grid-cols-8 min-h-[60px] border-b border-border/20">
+              <div className="p-2 text-xs font-medium text-muted-foreground flex items-start pt-2">
                 {hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
               </div>
               {weekDays.map((day) => {
@@ -99,37 +99,43 @@ export const WeeklyView = ({
                   <div 
                     key={`${day.dateStr}-${hour}`} 
                     className={cn(
-                      "border-l border-border/30 p-0.5 relative",
+                      "border-l border-border/20 p-1 relative min-h-[60px]",
                       day.isSelected && "bg-primary/5"
                     )}
                   >
-                    {tasksInHour.map((task, i) => (
-                      <motion.button
-                        key={task.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        onClick={() => onTaskClick(task)}
-                        className={cn(
-                          "w-full text-left p-1 rounded text-[10px] mb-0.5 border-l-2 truncate",
-                          categoryColors[task.category],
-                          task.status === 'completed' || task.status === 'completed-on-time' 
-                            ? 'opacity-60' 
-                            : ''
-                        )}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <div className="flex items-center gap-1">
-                          {(task.status === 'completed' || task.status === 'completed-on-time') && (
-                            <CheckCircle2 className="w-2.5 h-2.5 text-success flex-shrink-0" />
+                    {tasksInHour.map((task) => {
+                      const isCompleted = task.status === 'completed' || task.status === 'completed-on-time';
+                      return (
+                        <motion.button
+                          key={task.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          onClick={() => onTaskClick(task)}
+                          className={cn(
+                            "w-full text-left p-2 rounded-lg text-xs mb-1 border-l-[3px] transition-all",
+                            categoryColors[task.category],
+                            isCompleted && 'opacity-60'
                           )}
-                          {task.status === 'missed' && (
-                            <AlertCircle className="w-2.5 h-2.5 text-destructive flex-shrink-0" />
-                          )}
-                          <span className="truncate">{task.title}</span>
-                        </div>
-                      </motion.button>
-                    ))}
+                          whileHover={{ scale: 1.02, x: 2 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <div className="flex items-center gap-1.5 mb-1">
+                            {isCompleted ? (
+                              <CheckCircle2 className="w-3 h-3 text-success flex-shrink-0" />
+                            ) : task.status === 'missed' ? (
+                              <AlertCircle className="w-3 h-3 text-destructive flex-shrink-0" />
+                            ) : (
+                              <Circle className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                            )}
+                            <span className="truncate font-medium">{task.title}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Clock className="w-2.5 h-2.5" />
+                            <span className="text-[10px]">{task.startTime}</span>
+                          </div>
+                        </motion.button>
+                      );
+                    })}
                   </div>
                 );
               })}

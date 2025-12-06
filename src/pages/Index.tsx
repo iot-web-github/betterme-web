@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { format } from 'date-fns';
+import { Link } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { DateSelector } from '@/components/layout/DateSelector';
 import { EnhancedTimeline } from '@/components/schedule/EnhancedTimeline';
 import { TaskForm } from '@/components/schedule/TaskForm';
 import { TaskDetailSheet } from '@/components/schedule/TaskDetailSheet';
 import { DailyScheduleManager } from '@/components/schedule/DailyScheduleManager';
+import { FocusMode } from '@/components/schedule/FocusMode';
 import { ProductivityScore } from '@/components/dashboard/ProductivityScore';
 import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
 import { StreakCard } from '@/components/dashboard/StreakCard';
@@ -20,7 +22,7 @@ import { useDailySchedule } from '@/hooks/useDailySchedule';
 import { Task, ScheduleTemplate } from '@/types/schedule';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Clock, Calendar, CalendarDays, LayoutGrid } from 'lucide-react';
+import { Plus, Clock, Calendar, CalendarDays, LayoutGrid, BarChart3, Target } from 'lucide-react';
 
 type ViewMode = 'day' | 'week' | 'month';
 

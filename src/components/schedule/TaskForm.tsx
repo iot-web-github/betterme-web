@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Task, TaskCategory, TaskPriority, CATEGORY_LABELS, PRIORITY_LABELS } from '@/types/schedule';
+import { Task, TaskCategory, TaskPriority, TaskRecurrence, CATEGORY_LABELS, PRIORITY_LABELS } from '@/types/schedule';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RecurrenceSelector } from './RecurrenceSelector';
 import { X, Plus } from 'lucide-react';
 
 interface TaskFormProps {
@@ -22,6 +23,9 @@ export const TaskForm = ({ onSubmit, onClose, selectedDate, initialData }: TaskF
   const [endTime, setEndTime] = useState(initialData?.endTime || '10:00');
   const [category, setCategory] = useState<TaskCategory>(initialData?.category || 'work');
   const [priority, setPriority] = useState<TaskPriority>(initialData?.priority || 'medium');
+  const [recurrence, setRecurrence] = useState<TaskRecurrence>(
+    initialData?.recurrence || { type: 'none', interval: 1 }
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +39,7 @@ export const TaskForm = ({ onSubmit, onClose, selectedDate, initialData }: TaskF
       category,
       priority,
       date: selectedDate,
+      recurrence: recurrence.type !== 'none' ? recurrence : undefined,
     });
   };
 
@@ -51,7 +56,7 @@ export const TaskForm = ({ onSubmit, onClose, selectedDate, initialData }: TaskF
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md glass rounded-xl p-6 shadow-lg"
+        className="w-full max-w-md glass rounded-xl p-6 shadow-lg max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-foreground">
@@ -136,6 +141,11 @@ export const TaskForm = ({ onSubmit, onClose, selectedDate, initialData }: TaskF
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Recurrence Section */}
+          <div className="pt-4 border-t border-border/30">
+            <RecurrenceSelector value={recurrence} onChange={setRecurrence} />
           </div>
 
           <div className="flex gap-3 pt-4">

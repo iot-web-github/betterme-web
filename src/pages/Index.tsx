@@ -14,6 +14,7 @@ import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
 import { StreakCard } from '@/components/dashboard/StreakCard';
 import { QuickStats } from '@/components/dashboard/QuickStats';
 import { MiniCalendar } from '@/components/dashboard/MiniCalendar';
+import { ToolsGrid } from '@/components/dashboard/ToolsGrid';
 import { WeeklyView } from '@/components/views/WeeklyView';
 import { MonthlyView } from '@/components/views/MonthlyView';
 import { useSchedule } from '@/hooks/useSchedule';
@@ -22,7 +23,7 @@ import { useDailySchedule } from '@/hooks/useDailySchedule';
 import { Task, ScheduleTemplate } from '@/types/schedule';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Clock, Calendar, CalendarDays, LayoutGrid, BarChart3, Target } from 'lucide-react';
+import { Plus, Clock, Calendar, CalendarDays, LayoutGrid } from 'lucide-react';
 
 type ViewMode = 'day' | 'week' | 'month';
 
@@ -35,6 +36,7 @@ const Index = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showFocusMode, setShowFocusMode] = useState(false);
 
   const {
     tasks,
@@ -273,6 +275,9 @@ const Index = () => {
               )}
             </AnimatePresence>
 
+            {/* Tools Grid */}
+            <ToolsGrid onFocusModeClick={() => setShowFocusMode(true)} />
+
             {/* Daily Schedule Manager - Show only in day view */}
             {viewMode === 'day' && (
               <DailyScheduleManager
@@ -322,6 +327,10 @@ const Index = () => {
             selectedDate={selectedDate}
             initialData={editingTask || undefined}
           />
+        )}
+
+        {showFocusMode && (
+          <FocusMode onClose={() => setShowFocusMode(false)} />
         )}
 
         {selectedTask && (

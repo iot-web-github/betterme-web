@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useCurrentTime } from '@/hooks/useCurrentTime';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
 import { Sparkles, Zap, Home, BarChart3, ClipboardCheck, Repeat, Menu, X } from 'lucide-react';
 
 const navItems = [
@@ -106,6 +107,9 @@ export const Header = () => {
                 {timeString}
               </motion.p>
             </motion.div>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
 
             {/* Mobile Menu Button */}
             <Button

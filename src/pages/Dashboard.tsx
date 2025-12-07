@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -11,6 +11,9 @@ import { ProductiveHours } from '@/components/dashboard/ProductiveHours';
 import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
 import { StreakCard } from '@/components/dashboard/StreakCard';
 import { DailyNotes } from '@/components/dashboard/DailyNotes';
+import { LifeScoreCard } from '@/components/dashboard/LifeScoreCard';
+import { CorrelationInsights } from '@/components/dashboard/CorrelationInsights';
+import { CelebrationModal, useCelebrations } from '@/components/dashboard/CelebrationModal';
 import { useSchedule } from '@/hooks/useSchedule';
 import { useStreaks } from '@/hooks/useStreaks';
 import { Button } from '@/components/ui/button';
@@ -22,6 +25,19 @@ const Dashboard = () => {
   
   const { allTasks, dailyStats } = useSchedule(selectedDate);
   const { streakData } = useStreaks(allTasks);
+  const { celebration, checkStreakMilestone, checkTaskMilestone, closeCelebration } = useCelebrations();
+
+  // Check for milestones
+  useEffect(() => {
+    if (streakData.currentStreak > 0) {
+      checkStreakMilestone(streakData.currentStreak);
+    }
+    
+    const completedCount = allTasks.filter(t => t.status === 'completed' || t.status === 'completed-on-time').length;
+    if (completedCount > 0) {
+      checkTaskMilestone(completedCount);
+    }
+  }, [streakData.currentStreak, allTasks]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -76,12 +92,25 @@ const Dashboard = () => {
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
+            <LifeScoreCard />
+            <CorrelationInsights />
             <StreakCard streakData={streakData} />
             <GoalsCard />
             <UpcomingTasks tasks={allTasks} limit={5} />
           </div>
         </div>
       </main>
+
+      {/* Celebration Modal */}
+      {celebration && (
+        <CelebrationModal
+          isOpen={!!celebration}
+          onClose={closeCelebration}
+          type={celebration.type}
+          milestone={celebration.milestone}
+          message={celebration.message}
+        />
+      )}
     </div>
   );
 };

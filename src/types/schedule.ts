@@ -113,3 +113,72 @@ export const RECURRENCE_LABELS: Record<RecurrenceType, string> = {
   weekly: 'Weekly',
   monthly: 'Monthly',
 };
+
+// Life Tracking Types
+export type MoodLevel = 1 | 2 | 3 | 4 | 5;
+export type EnergyLevel = 1 | 2 | 3 | 4 | 5;
+export type StressLevel = 1 | 2 | 3 | 4 | 5;
+
+export interface DailyCheckIn {
+  id: string;
+  date: string; // YYYY-MM-DD
+  wakeUpTime: string; // HH:mm
+  sleepTime: string; // HH:mm (previous night)
+  phoneUsage: number; // minutes
+  mood: MoodLevel;
+  energy: EnergyLevel;
+  stress: StressLevel;
+  waterIntake: number; // glasses
+  exercise: boolean;
+  exerciseDuration?: number; // minutes
+  notes?: string;
+  syncStatus: 'pending' | 'synced';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Habit {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  frequency: 'daily' | 'weekly';
+  targetDays?: number[]; // For weekly: which days (0-6)
+  createdAt: string;
+}
+
+export interface HabitLog {
+  id: string;
+  habitId: string;
+  date: string;
+  completed: boolean;
+  notes?: string;
+  syncStatus: 'pending' | 'synced';
+  createdAt: string;
+}
+
+export interface LifeMetrics {
+  averageMood: number;
+  averageEnergy: number;
+  averageStress: number;
+  averageSleep: number; // hours
+  averagePhoneUsage: number; // minutes
+  exerciseDays: number;
+  waterAverage: number;
+}
+
+export const MOOD_LABELS: Record<MoodLevel, string> = {
+  1: 'Terrible',
+  2: 'Bad',
+  3: 'Okay',
+  4: 'Good',
+  5: 'Great',
+};
+
+export const MOOD_EMOJIS: Record<MoodLevel, string> = {
+  1: '😢',
+  2: '😔',
+  3: '😐',
+  4: '😊',
+  5: '🤩',
+};

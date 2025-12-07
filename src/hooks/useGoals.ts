@@ -77,6 +77,36 @@ export const useGoals = () => {
     });
   }, []);
 
+  // Auto-progress goals based on completed tasks
+  const updateGoalsFromTask = useCallback((taskCategory: TaskCategory) => {
+    setGoals(prev => {
+      let updated = false;
+      const newGoals = prev.map(goal => {
+        if (goal.category === taskCategory && !goal.isCompleted) {
+          const now = new Date();
+          const goalEnd = new Date(goal.endDate);
+          const goalStart = new Date(goal.startDate);
+          
+          if (now >= goalStart && now <= goalEnd) {
+            updated = true;
+            const newCount = Math.min(goal.currentCount + 1, goal.targetCount);
+            return {
+              ...goal,
+              currentCount: newCount,
+              isCompleted: newCount >= goal.targetCount,
+            };
+          }
+        }
+        return goal;
+      });
+      
+      if (updated) {
+        saveGoals(newGoals);
+      }
+      return updated ? newGoals : prev;
+    });
+  }, []);
+
   const deleteGoal = useCallback((goalId: string) => {
     setGoals(prev => {
       const updated = prev.filter(g => g.id !== goalId);
@@ -94,6 +124,7 @@ export const useGoals = () => {
     completedGoals,
     addGoal,
     updateGoalProgress,
+    updateGoalsFromTask,
     deleteGoal,
   };
 };

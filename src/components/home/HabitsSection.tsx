@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useHabits } from '@/hooks/useHabits';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,7 @@ const HABIT_COLORS = [
 
 export const HabitsSection = () => {
   const today = format(new Date(), 'yyyy-MM-dd');
+  const navigate = useNavigate();
   const {
     habits,
     addHabit,
@@ -63,6 +64,10 @@ export const HabitsSection = () => {
     }
   };
 
+  const handleViewAll = () => {
+    navigate('/tools');
+  };
+
   // Show max 4 habits in compact view
   const displayHabits = habits.slice(0, 4);
   const hasMore = habits.length > 4;
@@ -72,7 +77,7 @@ export const HabitsSection = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className="glass rounded-2xl p-5"
+      className="glass rounded-2xl p-4 sm:p-5"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -94,7 +99,7 @@ export const HabitsSection = () => {
                 <Plus className="w-3.5 h-3.5" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass">
+            <DialogContent className="glass max-w-[340px] sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Add New Habit</DialogTitle>
               </DialogHeader>
@@ -207,15 +212,16 @@ export const HabitsSection = () => {
         </div>
       )}
 
-      {/* View More Link */}
-      {hasMore && (
-        <Link to="/tools" className="block">
-          <Button variant="ghost" size="sm" className="w-full gap-1 text-xs h-8 text-muted-foreground hover:text-foreground">
-            View all {habits.length} habits
-            <ArrowRight className="w-3 h-3" />
-          </Button>
-        </Link>
-      )}
+      {/* View All Habits Button */}
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        onClick={handleViewAll}
+        className="w-full gap-1 text-xs h-8 text-muted-foreground hover:text-foreground"
+      >
+        {hasMore ? `View all ${habits.length} habits` : 'View All Habits'}
+        <ArrowRight className="w-3 h-3" />
+      </Button>
     </motion.div>
   );
 };

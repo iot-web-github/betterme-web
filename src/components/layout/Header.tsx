@@ -1,10 +1,18 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCurrentTime } from '@/hooks/useCurrentTime';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
-import { Sparkles, Zap, Home, BarChart3, ClipboardCheck, Wrench, Menu, X } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Sparkles, Zap, Home, BarChart3, ClipboardCheck, Wrench, Menu, X, User, LogOut } from 'lucide-react';
 
 const navItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -16,6 +24,8 @@ const navItems = [
 export const Header = () => {
   const { timeString, currentTime } = useCurrentTime();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const formattedDate = currentTime.toLocaleDateString('en-US', {
@@ -29,6 +39,11 @@ export const Header = () => {
     if (hour < 12) return 'Good Morning';
     if (hour < 17) return 'Good Afternoon';
     return 'Good Evening';
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
   return (
@@ -117,6 +132,34 @@ export const Header = () => {
 
             <ThemeToggle />
 
+            {/* User Menu */}
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl">
+                    <User className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 glass">
+                  <div className="px-2 py-1.5">
+                    <p className="text-xs font-medium text-foreground truncate">
+                      {user.email}
+                    </p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/dashboard')} className="gap-2 cursor-pointer">
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    <span className="text-xs">Dashboard</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="gap-2 cursor-pointer text-destructive focus:text-destructive">
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="text-xs">Sign Out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             {/* Mobile Menu Button */}
             <Button
               variant="ghost"
@@ -156,6 +199,19 @@ export const Header = () => {
                     </Link>
                   );
                 })}
+                {user && (
+                  <>
+                    <div className="h-px bg-border/50 my-2" />
+                    <Button
+                      variant="ghost"
+                      onClick={handleSignOut}
+                      className="w-full justify-start gap-2 h-10 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </Button>
+                  </>
+                )}
               </div>
             </motion.nav>
           )}

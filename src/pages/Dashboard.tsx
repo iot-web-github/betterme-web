@@ -11,15 +11,18 @@ import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
 import { StreakCard } from '@/components/dashboard/StreakCard';
 import { LifeScoreCard } from '@/components/dashboard/LifeScoreCard';
 import { CorrelationInsights } from '@/components/dashboard/CorrelationInsights';
+import { DataExportCard } from '@/components/dashboard/DataExportCard';
 import { CelebrationModal, useCelebrations } from '@/components/dashboard/CelebrationModal';
 import { useSchedule } from '@/hooks/useSchedule';
 import { useStreaks } from '@/hooks/useStreaks';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, TrendingUp, Sparkles } from 'lucide-react';
+import { LayoutGrid, TrendingUp, User } from 'lucide-react';
 
 const Dashboard = () => {
   const today = new Date().toISOString().split('T')[0];
   const [selectedDate] = useState(today);
+  const { user } = useAuth();
   
   const { allTasks, dailyStats } = useSchedule(selectedDate);
   const { streakData } = useStreaks(allTasks);
@@ -45,7 +48,7 @@ const Dashboard = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-6"
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-info flex items-center justify-center">
@@ -58,12 +61,22 @@ const Dashboard = () => {
               </p>
             </div>
           </div>
-          <Link to="/">
-            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
-              <LayoutGrid className="w-3.5 h-3.5" />
-              Schedule
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            {user && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl glass border border-border/20">
+                <User className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-[180px]">
+                  {user.email}
+                </span>
+              </div>
+            )}
+            <Link to="/">
+              <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Schedule</span>
+              </Button>
+            </Link>
+          </div>
         </motion.div>
 
         {/* Stats Overview */}
@@ -77,7 +90,7 @@ const Dashboard = () => {
           <div className="lg:col-span-2 space-y-4">
             <WeeklyTrends tasks={allTasks} />
             
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4">
               <ProductiveHours tasks={allTasks} />
               <CategoryBreakdown timeByCategory={dailyStats.timeByCategory} />
             </div>
@@ -90,6 +103,7 @@ const Dashboard = () => {
           <div className="space-y-4">
             <LifeScoreCard />
             <StreakCard streakData={streakData} />
+            <DataExportCard />
             <UpcomingTasks tasks={allTasks} limit={5} />
           </div>
         </div>

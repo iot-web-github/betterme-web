@@ -147,6 +147,10 @@ export const Header = () => {
                     </p>
                   </div>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/profile')} className="gap-2 cursor-pointer">
+                    <User className="w-3.5 h-3.5" />
+                    <span className="text-xs">Profile</span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/dashboard')} className="gap-2 cursor-pointer">
                     <BarChart3 className="w-3.5 h-3.5" />
                     <span className="text-xs">Dashboard</span>

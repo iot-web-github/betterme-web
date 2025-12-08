@@ -77,7 +77,6 @@ export const SleepTracker = () => {
       phoneUsage: todayCheckIn?.phoneUsage || 0,
       waterIntake: todayCheckIn?.waterIntake || 0,
       exercise: todayCheckIn?.exercise || false,
-      gratitude: todayCheckIn?.gratitude || [],
       notes: todayCheckIn?.notes || '',
     });
     setShowLogDialog(false);

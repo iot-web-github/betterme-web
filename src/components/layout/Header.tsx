@@ -4,13 +4,14 @@ import { Link, useLocation } from 'react-router-dom';
 import { useCurrentTime } from '@/hooks/useCurrentTime';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
-import { Sparkles, Zap, Home, BarChart3, ClipboardCheck, Repeat, Menu, X } from 'lucide-react';
+import { Sparkles, Zap, Home, BarChart3, ClipboardCheck, Repeat, Wrench, Menu, X } from 'lucide-react';
 
 const navItems = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { href: '/checkin', label: 'Check-in', icon: ClipboardCheck },
   { href: '/habits', label: 'Habits', icon: Repeat },
+  { href: '/tools', label: 'Tools', icon: Wrench },
 ];
 
 export const Header = () => {

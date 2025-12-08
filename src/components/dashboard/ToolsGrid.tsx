@@ -5,10 +5,10 @@ import {
   Clock,
   ClipboardCheck,
   Sparkles,
-  Calendar,
   BarChart3,
   Heart,
-  Repeat,
+  FileText,
+  Wrench,
 } from 'lucide-react';
 
 interface Tool {
@@ -37,26 +37,18 @@ export const ToolsGrid = ({ onFocusModeClick }: ToolsGridProps) => {
     },
     {
       id: 'checkin',
-      name: 'Daily Check-in',
+      name: 'Check-in',
       description: 'Track your day',
       icon: ClipboardCheck,
       href: '/checkin',
       color: 'hsl(var(--success))',
     },
     {
-      id: 'goals',
-      name: 'Goals',
-      description: 'Set & track goals',
-      icon: Target,
-      href: '/dashboard',
-      color: 'hsl(var(--warning))',
-    },
-    {
-      id: 'habits',
-      name: 'Habits',
-      description: 'Build routines',
-      icon: Repeat,
-      href: '/habits',
+      id: 'tools',
+      name: 'Life Tools',
+      description: 'Notes & trackers',
+      icon: Wrench,
+      href: '/tools',
       color: 'hsl(var(--info))',
     },
     {
@@ -65,15 +57,7 @@ export const ToolsGrid = ({ onFocusModeClick }: ToolsGridProps) => {
       description: 'View insights',
       icon: BarChart3,
       href: '/dashboard',
-      color: 'hsl(var(--category-personal))',
-    },
-    {
-      id: 'mood',
-      name: 'Mood Log',
-      description: 'Track feelings',
-      icon: Heart,
-      href: '/checkin',
-      color: 'hsl(var(--category-social))',
+      color: 'hsl(var(--warning))',
     },
   ];
 
@@ -81,35 +65,35 @@ export const ToolsGrid = ({ onFocusModeClick }: ToolsGridProps) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2 }}
-      className="glass rounded-2xl p-6"
+      transition={{ delay: 0.15 }}
+      className="glass rounded-2xl p-5"
     >
-      <h3 className="text-lg font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-        <Sparkles className="w-5 h-5 text-primary" />
-        Quick Tools
+      <h3 className="text-sm font-display font-semibold text-foreground mb-3 flex items-center gap-2">
+        <Sparkles className="w-4 h-4 text-primary" />
+        Quick Actions
       </h3>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {tools.map((tool, idx) => {
           const Icon = tool.icon;
           const content = (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: idx * 0.05 }}
-              whileHover={{ scale: 1.02, y: -2 }}
+              transition={{ delay: idx * 0.04 }}
+              whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer group"
+              className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-secondary/40 hover:bg-secondary/60 transition-all cursor-pointer group"
             >
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                style={{ backgroundColor: `${tool.color}20` }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
+                style={{ backgroundColor: `${tool.color}15` }}
               >
-                <Icon className="w-6 h-6" style={{ color: tool.color }} />
+                <Icon className="w-5 h-5" style={{ color: tool.color }} />
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium text-foreground">{tool.name}</p>
-                <p className="text-xs text-muted-foreground">{tool.description}</p>
+                <p className="text-xs font-medium text-foreground">{tool.name}</p>
+                <p className="text-[10px] text-muted-foreground">{tool.description}</p>
               </div>
             </motion.div>
           );

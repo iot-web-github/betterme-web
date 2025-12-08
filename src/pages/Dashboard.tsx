@@ -6,18 +6,16 @@ import { Header } from '@/components/layout/Header';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { WeeklyTrends } from '@/components/dashboard/WeeklyTrends';
 import { UpcomingTasks } from '@/components/dashboard/UpcomingTasks';
-import { GoalsCard } from '@/components/dashboard/GoalsCard';
 import { ProductiveHours } from '@/components/dashboard/ProductiveHours';
 import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
 import { StreakCard } from '@/components/dashboard/StreakCard';
-import { DailyNotes } from '@/components/dashboard/DailyNotes';
 import { LifeScoreCard } from '@/components/dashboard/LifeScoreCard';
 import { CorrelationInsights } from '@/components/dashboard/CorrelationInsights';
 import { CelebrationModal, useCelebrations } from '@/components/dashboard/CelebrationModal';
 import { useSchedule } from '@/hooks/useSchedule';
 import { useStreaks } from '@/hooks/useStreaks';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, LayoutGrid } from 'lucide-react';
+import { LayoutGrid, TrendingUp, Sparkles } from 'lucide-react';
 
 const Dashboard = () => {
   const today = new Date().toISOString().split('T')[0];
@@ -27,7 +25,6 @@ const Dashboard = () => {
   const { streakData } = useStreaks(allTasks);
   const { celebration, checkStreakMilestone, checkTaskMilestone, closeCelebration } = useCelebrations();
 
-  // Check for milestones
   useEffect(() => {
     if (streakData.currentStreak > 0) {
       checkStreakMilestone(streakData.currentStreak);
@@ -43,59 +40,56 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Top Navigation */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        {/* Page Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-8"
+          className="flex items-center justify-between mb-6"
         >
-          <div className="flex items-center gap-4">
-            <Link to="/">
-              <Button variant="ghost" size="icon" className="rounded-xl">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-info flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
             <div>
-              <h1 className="text-2xl font-display font-bold text-foreground">Dashboard</h1>
-              <p className="text-sm text-muted-foreground">
-                Your productivity overview • {format(new Date(), 'MMMM yyyy')}
+              <h1 className="text-xl font-display font-bold text-foreground">Dashboard</h1>
+              <p className="text-xs text-muted-foreground">
+                Insights & Analytics • {format(new Date(), 'MMMM yyyy')}
               </p>
             </div>
           </div>
           <Link to="/">
-            <Button variant="outline" className="gap-2">
-              <LayoutGrid className="w-4 h-4" />
+            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+              <LayoutGrid className="w-3.5 h-3.5" />
               Schedule
             </Button>
           </Link>
         </motion.div>
 
         {/* Stats Overview */}
-        <section className="mb-8">
+        <section className="mb-6">
           <DashboardStats tasks={allTasks} />
         </section>
 
         {/* Main Grid */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Column */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid lg:grid-cols-3 gap-4">
+          {/* Left Column - Charts */}
+          <div className="lg:col-span-2 space-y-4">
             <WeeklyTrends tasks={allTasks} />
             
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-4">
               <ProductiveHours tasks={allTasks} />
               <CategoryBreakdown timeByCategory={dailyStats.timeByCategory} />
             </div>
 
-            <DailyNotes selectedDate={selectedDate} />
+            {/* Correlation Insights - Full Width */}
+            <CorrelationInsights />
           </div>
 
           {/* Right Column - Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <LifeScoreCard />
-            <CorrelationInsights />
             <StreakCard streakData={streakData} />
-            <GoalsCard />
             <UpcomingTasks tasks={allTasks} limit={5} />
           </div>
         </div>

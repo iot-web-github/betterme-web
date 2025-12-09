@@ -77,6 +77,90 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_checkins: {
+        Row: {
+          created_at: string
+          date: string
+          energy: number | null
+          exercise: boolean | null
+          exercise_duration: number | null
+          id: string
+          mood: number | null
+          notes: string | null
+          phone_usage: number | null
+          sleep_time: string | null
+          stress: number | null
+          updated_at: string
+          user_id: string
+          wake_up_time: string | null
+          water_intake: number | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          energy?: number | null
+          exercise?: boolean | null
+          exercise_duration?: number | null
+          id?: string
+          mood?: number | null
+          notes?: string | null
+          phone_usage?: number | null
+          sleep_time?: string | null
+          stress?: number | null
+          updated_at?: string
+          user_id: string
+          wake_up_time?: string | null
+          water_intake?: number | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          energy?: number | null
+          exercise?: boolean | null
+          exercise_duration?: number | null
+          id?: string
+          mood?: number | null
+          notes?: string | null
+          phone_usage?: number | null
+          sleep_time?: string | null
+          stress?: number | null
+          updated_at?: string
+          user_id?: string
+          wake_up_time?: string | null
+          water_intake?: number | null
+        }
+        Relationships: []
+      }
+      energy_logs: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          level: number
+          note: string | null
+          time: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          level: number
+          note?: string | null
+          time: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          level?: number
+          note?: string | null
+          time?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           created_at: string
@@ -110,6 +194,214 @@ export type Database = {
           priority?: Database["public"]["Enums"]["priority_level"]
           status?: Database["public"]["Enums"]["goal_status"]
           target_date?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      habit_logs: {
+        Row: {
+          completed: boolean
+          created_at: string
+          date: string
+          habit_id: string
+          id: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          date: string
+          habit_id: string
+          id?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          date?: string
+          habit_id?: string
+          id?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_logs_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habits: {
+        Row: {
+          color: string
+          created_at: string
+          frequency: string
+          icon: string
+          id: string
+          name: string
+          target_days: number[] | null
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          frequency?: string
+          icon?: string
+          id?: string
+          name: string
+          target_days?: number[] | null
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          frequency?: string
+          icon?: string
+          id?: string
+          name?: string
+          target_days?: number[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      health_logs: {
+        Row: {
+          calories: number | null
+          created_at: string
+          date: string
+          exercise_minutes: number | null
+          id: string
+          steps: number | null
+          updated_at: string
+          user_id: string
+          water_intake: number | null
+        }
+        Insert: {
+          calories?: number | null
+          created_at?: string
+          date: string
+          exercise_minutes?: number | null
+          id?: string
+          steps?: number | null
+          updated_at?: string
+          user_id: string
+          water_intake?: number | null
+        }
+        Update: {
+          calories?: number | null
+          created_at?: string
+          date?: string
+          exercise_minutes?: number | null
+          id?: string
+          steps?: number | null
+          updated_at?: string
+          user_id?: string
+          water_intake?: number | null
+        }
+        Relationships: []
+      }
+      mood_entries: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          level: number
+          reasons: string | null
+          time: string
+          triggers: string[] | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          level: number
+          reasons?: string | null
+          time: string
+          triggers?: string[] | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          level?: number
+          reasons?: string | null
+          time?: string
+          triggers?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      note_entries: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          note_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          note_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          note_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_entries_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          color: string | null
+          content: string | null
+          created_at: string
+          folder: string | null
+          id: string
+          is_pinned: boolean | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          content?: string | null
+          created_at?: string
+          folder?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          content?: string | null
+          created_at?: string
+          folder?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          tags?: string[] | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -271,6 +563,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           created_at: string
@@ -322,6 +635,42 @@ export type Database = {
           wake_time?: string | null
           work_end_time?: string | null
           work_start_time?: string | null
+        }
+        Relationships: []
+      }
+      user_streaks: {
+        Row: {
+          created_at: string
+          current_streak: number | null
+          id: string
+          last_active_date: string | null
+          longest_streak: number | null
+          perfect_days: number | null
+          total_tasks_completed: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number | null
+          id?: string
+          last_active_date?: string | null
+          longest_streak?: number | null
+          perfect_days?: number | null
+          total_tasks_completed?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number | null
+          id?: string
+          last_active_date?: string | null
+          longest_streak?: number | null
+          perfect_days?: number | null
+          total_tasks_completed?: number | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

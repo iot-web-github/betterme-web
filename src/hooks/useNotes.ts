@@ -1,155 +1,238 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Note, NoteEntry, NoteAttachment } from '@/types/tools';
-import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
-const STORAGE_KEY = 'smart-schedule-notes';
+export interface NoteEntry {
+  id: string;
+  timestamp: string;
+  content: string;
+}
 
-const getStoredNotes = (): Note[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveNotes = (notes: Note[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
-};
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  entries: NoteEntry[];
+  tags: string[];
+  folder?: string;
+  color: string;
+  isPinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export const useNotes = () => {
+  const { user } = useAuth();
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setNotes(getStoredNotes());
-    setIsLoading(false);
-  }, []);
+    if (!user) {
+      setNotes([]);
+      setIsLoading(false);
+      return;
+    }
 
-  const addNote = useCallback((data: {
+    const fetchNotes = async () => {
+      setIsLoading(true);
+      
+      // Fetch notes with their entries
+      const { data: notesData, error: notesError } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (notesError) {
+        console.error('Error fetching notes:', notesError);
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch all note entries for the user's notes
+      const noteIds = notesData?.map(n => n.id) || [];
+      let entriesData: any[] = [];
+      
+      if (noteIds.length > 0) {
+        const { data, error } = await supabase
+          .from('note_entries')
+          .select('*')
+          .in('note_id', noteIds)
+          .order('created_at', { ascending: true });
+        
+        if (!error) {
+          entriesData = data || [];
+        }
+      }
+
+      // Combine notes with their entries
+      const notesWithEntries = notesData?.map(n => ({
+        id: n.id,
+        title: n.title,
+        content: n.content || '',
+        entries: entriesData
+          .filter(e => e.note_id === n.id)
+          .map(e => ({
+            id: e.id,
+            timestamp: e.created_at,
+            content: e.content,
+          })),
+        tags: n.tags || [],
+        folder: n.folder || undefined,
+        color: n.color || 'hsl(262 83% 58%)',
+        isPinned: n.is_pinned || false,
+        createdAt: n.created_at,
+        updatedAt: n.updated_at,
+      })) || [];
+      
+      setNotes(notesWithEntries);
+      setIsLoading(false);
+    };
+
+    fetchNotes();
+  }, [user]);
+
+  const addNote = useCallback(async (data: {
     title: string;
     content?: string;
     tags?: string[];
     folder?: string;
     color?: string;
-  }): Note => {
-    const newNote: Note = {
-      id: uuidv4(),
+  }): Promise<Note | null> => {
+    if (!user) return null;
+
+    const { data: newNote, error } = await supabase.from('notes').insert({
+      user_id: user.id,
       title: data.title,
       content: data.content || '',
-      entries: [],
       tags: data.tags || [],
-      folder: data.folder,
+      folder: data.folder || null,
       color: data.color || 'hsl(262 83% 58%)',
-      isPinned: false,
-      attachments: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      is_pinned: false,
+    }).select().single();
+
+    if (error || !newNote) {
+      console.error('Error adding note:', error);
+      return null;
+    }
+
+    const note: Note = {
+      id: newNote.id,
+      title: newNote.title,
+      content: newNote.content || '',
+      entries: [],
+      tags: newNote.tags || [],
+      folder: newNote.folder || undefined,
+      color: newNote.color || 'hsl(262 83% 58%)',
+      isPinned: newNote.is_pinned || false,
+      createdAt: newNote.created_at,
+      updatedAt: newNote.updated_at,
     };
 
-    setNotes(prev => {
-      const updated = [newNote, ...prev];
-      saveNotes(updated);
-      return updated;
-    });
+    setNotes(prev => [note, ...prev]);
+    return note;
+  }, [user]);
 
-    return newNote;
-  }, []);
+  const updateNote = useCallback(async (noteId: string, data: Partial<Note>) => {
+    if (!user) return;
 
-  const updateNote = useCallback((noteId: string, data: Partial<Note>) => {
-    setNotes(prev => {
-      const updated = prev.map(n =>
-        n.id === noteId
-          ? { ...n, ...data, updatedAt: new Date().toISOString() }
-          : n
-      );
-      saveNotes(updated);
-      return updated;
-    });
-  }, []);
+    const updateData: any = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.content !== undefined) updateData.content = data.content;
+    if (data.tags !== undefined) updateData.tags = data.tags;
+    if (data.folder !== undefined) updateData.folder = data.folder;
+    if (data.color !== undefined) updateData.color = data.color;
+    if (data.isPinned !== undefined) updateData.is_pinned = data.isPinned;
 
-  const deleteNote = useCallback((noteId: string) => {
-    setNotes(prev => {
-      const updated = prev.filter(n => n.id !== noteId);
-      saveNotes(updated);
-      return updated;
-    });
-  }, []);
+    const { error } = await supabase
+      .from('notes')
+      .update(updateData)
+      .eq('id', noteId);
 
-  const togglePin = useCallback((noteId: string) => {
-    setNotes(prev => {
-      const updated = prev.map(n =>
-        n.id === noteId
-          ? { ...n, isPinned: !n.isPinned, updatedAt: new Date().toISOString() }
-          : n
-      );
-      saveNotes(updated);
-      return updated;
-    });
-  }, []);
+    if (error) {
+      console.error('Error updating note:', error);
+      return;
+    }
 
-  const addEntry = useCallback((noteId: string, content: string): NoteEntry => {
-    const newEntry: NoteEntry = {
-      id: uuidv4(),
-      timestamp: new Date().toISOString(),
+    setNotes(prev => prev.map(n =>
+      n.id === noteId
+        ? { ...n, ...data, updatedAt: new Date().toISOString() }
+        : n
+    ));
+  }, [user]);
+
+  const deleteNote = useCallback(async (noteId: string) => {
+    if (!user) return;
+
+    const { error } = await supabase.from('notes').delete().eq('id', noteId);
+    
+    if (error) {
+      console.error('Error deleting note:', error);
+      return;
+    }
+
+    setNotes(prev => prev.filter(n => n.id !== noteId));
+  }, [user]);
+
+  const togglePin = useCallback(async (noteId: string) => {
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+    
+    await updateNote(noteId, { isPinned: !note.isPinned });
+  }, [notes, updateNote]);
+
+  const addEntry = useCallback(async (noteId: string, content: string): Promise<NoteEntry | null> => {
+    if (!user) return null;
+
+    const { data: newEntry, error } = await supabase.from('note_entries').insert({
+      note_id: noteId,
       content,
+    }).select().single();
+
+    if (error || !newEntry) {
+      console.error('Error adding note entry:', error);
+      return null;
+    }
+
+    const entry: NoteEntry = {
+      id: newEntry.id,
+      timestamp: newEntry.created_at,
+      content: newEntry.content,
     };
 
-    setNotes(prev => {
-      const updated = prev.map(n =>
-        n.id === noteId
-          ? { 
-              ...n, 
-              entries: [...n.entries, newEntry],
-              updatedAt: new Date().toISOString() 
-            }
-          : n
-      );
-      saveNotes(updated);
-      return updated;
-    });
+    setNotes(prev => prev.map(n =>
+      n.id === noteId
+        ? { 
+            ...n, 
+            entries: [...n.entries, entry],
+            updatedAt: new Date().toISOString() 
+          }
+        : n
+    ));
 
-    return newEntry;
-  }, []);
+    return entry;
+  }, [user]);
 
-  const deleteEntry = useCallback((noteId: string, entryId: string) => {
-    setNotes(prev => {
-      const updated = prev.map(n =>
-        n.id === noteId
-          ? { 
-              ...n, 
-              entries: n.entries.filter(e => e.id !== entryId),
-              updatedAt: new Date().toISOString() 
-            }
-          : n
-      );
-      saveNotes(updated);
-      return updated;
-    });
-  }, []);
+  const deleteEntry = useCallback(async (noteId: string, entryId: string) => {
+    if (!user) return;
 
-  const addAttachment = useCallback((noteId: string, attachment: Omit<NoteAttachment, 'id'>): NoteAttachment => {
-    const newAttachment: NoteAttachment = {
-      ...attachment,
-      id: uuidv4(),
-    };
+    const { error } = await supabase.from('note_entries').delete().eq('id', entryId);
+    
+    if (error) {
+      console.error('Error deleting note entry:', error);
+      return;
+    }
 
-    setNotes(prev => {
-      const updated = prev.map(n =>
-        n.id === noteId
-          ? { 
-              ...n, 
-              attachments: [...n.attachments, newAttachment],
-              updatedAt: new Date().toISOString() 
-            }
-          : n
-      );
-      saveNotes(updated);
-      return updated;
-    });
-
-    return newAttachment;
-  }, []);
+    setNotes(prev => prev.map(n =>
+      n.id === noteId
+        ? { 
+            ...n, 
+            entries: n.entries.filter(e => e.id !== entryId),
+            updatedAt: new Date().toISOString() 
+          }
+        : n
+    ));
+  }, [user]);
 
   const searchNotes = useCallback((query: string): Note[] => {
     if (!query.trim()) return notes;
@@ -202,7 +285,6 @@ export const useNotes = () => {
     togglePin,
     addEntry,
     deleteEntry,
-    addAttachment,
     searchNotes,
     getNotesByFolder,
     getNotesByTag,

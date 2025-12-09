@@ -11,6 +11,16 @@ export interface ExportableData {
   ai_chat_history: any[];
   user_preferences: any;
   profile: any;
+  habits: any[];
+  habit_logs: any[];
+  mood_entries: any[];
+  daily_checkins: any[];
+  energy_logs: any[];
+  health_logs: any[];
+  notes: any[];
+  note_entries: any[];
+  user_streaks: any;
+  user_achievements: any[];
 }
 
 // Fetch all user data from Supabase
@@ -24,6 +34,16 @@ export const fetchAllUserData = async (userId: string): Promise<ExportableData> 
     chatResult,
     preferencesResult,
     profileResult,
+    habitsResult,
+    habitLogsResult,
+    moodResult,
+    checkinsResult,
+    energyResult,
+    healthResult,
+    notesResult,
+    noteEntriesResult,
+    streaksResult,
+    achievementsResult,
   ] = await Promise.all([
     supabase.from('tasks').select('*').eq('user_id', userId),
     supabase.from('goals').select('*').eq('user_id', userId),
@@ -31,9 +51,23 @@ export const fetchAllUserData = async (userId: string): Promise<ExportableData> 
     supabase.from('schedule_blocks').select('*').eq('user_id', userId),
     supabase.from('timetable_entries').select('*').eq('user_id', userId),
     supabase.from('ai_chat_history').select('*').eq('user_id', userId),
-    supabase.from('user_preferences').select('*').eq('user_id', userId).single(),
-    supabase.from('profiles').select('*').eq('id', userId).single(),
+    supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(),
+    supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+    supabase.from('habits').select('*').eq('user_id', userId),
+    supabase.from('habit_logs').select('*').eq('user_id', userId),
+    supabase.from('mood_entries').select('*').eq('user_id', userId),
+    supabase.from('daily_checkins').select('*').eq('user_id', userId),
+    supabase.from('energy_logs').select('*').eq('user_id', userId),
+    supabase.from('health_logs').select('*').eq('user_id', userId),
+    supabase.from('notes').select('*').eq('user_id', userId),
+    supabase.from('note_entries').select('*'),
+    supabase.from('user_streaks').select('*').eq('user_id', userId).maybeSingle(),
+    supabase.from('user_achievements').select('*').eq('user_id', userId),
   ]);
+
+  // Filter note entries to only include those belonging to user's notes
+  const userNoteIds = notesResult.data?.map(n => n.id) || [];
+  const userNoteEntries = noteEntriesResult.data?.filter(e => userNoteIds.includes(e.note_id)) || [];
 
   return {
     tasks: tasksResult.data || [],
@@ -44,6 +78,16 @@ export const fetchAllUserData = async (userId: string): Promise<ExportableData> 
     ai_chat_history: chatResult.data || [],
     user_preferences: preferencesResult.data || null,
     profile: profileResult.data || null,
+    habits: habitsResult.data || [],
+    habit_logs: habitLogsResult.data || [],
+    mood_entries: moodResult.data || [],
+    daily_checkins: checkinsResult.data || [],
+    energy_logs: energyResult.data || [],
+    health_logs: healthResult.data || [],
+    notes: notesResult.data || [],
+    note_entries: userNoteEntries,
+    user_streaks: streaksResult.data || null,
+    user_achievements: achievementsResult.data || [],
   };
 };
 
@@ -81,7 +125,7 @@ export const exportUserDataAsZip = async (userId: string): Promise<void> => {
   // Create data folder
   const dataFolder = zip.folder('data');
   
-  // Add JSON files
+  // Add JSON and CSV files
   if (dataFolder) {
     // Tasks
     if (data.tasks.length > 0) {
@@ -127,6 +171,63 @@ export const exportUserDataAsZip = async (userId: string): Promise<void> => {
     if (data.profile) {
       dataFolder.file('profile.json', JSON.stringify(data.profile, null, 2));
     }
+
+    // Habits
+    if (data.habits.length > 0) {
+      dataFolder.file('habits.json', JSON.stringify(data.habits, null, 2));
+      dataFolder.file('habits.csv', toCSV(data.habits));
+    }
+
+    // Habit logs
+    if (data.habit_logs.length > 0) {
+      dataFolder.file('habit_logs.json', JSON.stringify(data.habit_logs, null, 2));
+      dataFolder.file('habit_logs.csv', toCSV(data.habit_logs));
+    }
+
+    // Mood entries
+    if (data.mood_entries.length > 0) {
+      dataFolder.file('mood_entries.json', JSON.stringify(data.mood_entries, null, 2));
+      dataFolder.file('mood_entries.csv', toCSV(data.mood_entries));
+    }
+
+    // Daily check-ins
+    if (data.daily_checkins.length > 0) {
+      dataFolder.file('daily_checkins.json', JSON.stringify(data.daily_checkins, null, 2));
+      dataFolder.file('daily_checkins.csv', toCSV(data.daily_checkins));
+    }
+
+    // Energy logs
+    if (data.energy_logs.length > 0) {
+      dataFolder.file('energy_logs.json', JSON.stringify(data.energy_logs, null, 2));
+      dataFolder.file('energy_logs.csv', toCSV(data.energy_logs));
+    }
+
+    // Health logs
+    if (data.health_logs.length > 0) {
+      dataFolder.file('health_logs.json', JSON.stringify(data.health_logs, null, 2));
+      dataFolder.file('health_logs.csv', toCSV(data.health_logs));
+    }
+
+    // Notes
+    if (data.notes.length > 0) {
+      dataFolder.file('notes.json', JSON.stringify(data.notes, null, 2));
+      dataFolder.file('notes.csv', toCSV(data.notes));
+    }
+
+    // Note entries
+    if (data.note_entries.length > 0) {
+      dataFolder.file('note_entries.json', JSON.stringify(data.note_entries, null, 2));
+    }
+
+    // User streaks
+    if (data.user_streaks) {
+      dataFolder.file('streaks.json', JSON.stringify(data.user_streaks, null, 2));
+    }
+
+    // Achievements
+    if (data.user_achievements.length > 0) {
+      dataFolder.file('achievements.json', JSON.stringify(data.user_achievements, null, 2));
+    }
   }
   
   // Add summary file
@@ -139,6 +240,14 @@ export const exportUserDataAsZip = async (userId: string): Promise<void> => {
       schedule_blocks: data.schedule_blocks.length,
       timetable_entries: data.timetable_entries.length,
       chat_messages: data.ai_chat_history.length,
+      habits: data.habits.length,
+      habit_logs: data.habit_logs.length,
+      mood_entries: data.mood_entries.length,
+      daily_checkins: data.daily_checkins.length,
+      energy_logs: data.energy_logs.length,
+      health_logs: data.health_logs.length,
+      notes: data.notes.length,
+      achievements: data.user_achievements.length,
     },
   };
   zip.file('export_summary.json', JSON.stringify(summary, null, 2));
@@ -157,6 +266,16 @@ Contents:
 - data/chat_history.json - AI chat history
 - data/preferences.json - Your app preferences
 - data/profile.json - Your profile information
+- data/habits.json & habits.csv - Your habits
+- data/habit_logs.json & habit_logs.csv - Habit completion logs
+- data/mood_entries.json & mood_entries.csv - Mood tracking data
+- data/daily_checkins.json & daily_checkins.csv - Daily check-in data
+- data/energy_logs.json & energy_logs.csv - Energy tracking data
+- data/health_logs.json & health_logs.csv - Health stats data
+- data/notes.json & notes.csv - Your notes
+- data/note_entries.json - Note entries
+- data/streaks.json - Your streak data
+- data/achievements.json - Your unlocked achievements
 - export_summary.json - Summary of exported data
 
 Both JSON and CSV formats are provided where applicable.

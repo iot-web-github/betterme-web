@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { useNotes } from '@/hooks/useNotes';
-import { Note } from '@/types/tools';
+import { useNotes, Note, NoteEntry } from '@/hooks/useNotes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,11 +21,8 @@ import {
   PinOff,
   Trash2,
   Tag,
-  Folder,
   Clock,
-  Link,
   X,
-  ChevronRight,
 } from 'lucide-react';
 
 const NOTE_COLORS = [
@@ -49,7 +45,6 @@ export const NotesTool = () => {
     deleteEntry,
     searchNotes,
     getAllTags,
-    getAllFolders,
   } = useNotes();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,9 +65,9 @@ export const NotesTool = () => {
 
   const allTags = getAllTags();
 
-  const handleCreateNote = () => {
+  const handleCreateNote = async () => {
     if (newNoteTitle.trim()) {
-      const note = addNote({
+      const note = await addNote({
         title: newNoteTitle.trim(),
         content: newNoteContent,
         color: selectedColor,
@@ -80,46 +75,54 @@ export const NotesTool = () => {
       setNewNoteTitle('');
       setNewNoteContent('');
       setShowNewNote(false);
-      setSelectedNote(note);
+      if (note) {
+        setSelectedNote(note);
+      }
     }
   };
 
-  const handleAddTag = () => {
+  const handleAddTag = async () => {
     if (selectedNote && newTag.trim()) {
       const updatedTags = [...selectedNote.tags, newTag.trim()];
-      updateNote(selectedNote.id, { tags: updatedTags });
+      await updateNote(selectedNote.id, { tags: updatedTags });
       setSelectedNote({ ...selectedNote, tags: updatedTags });
       setNewTag('');
     }
   };
 
-  const handleRemoveTag = (tag: string) => {
+  const handleRemoveTag = async (tag: string) => {
     if (selectedNote) {
       const updatedTags = selectedNote.tags.filter(t => t !== tag);
-      updateNote(selectedNote.id, { tags: updatedTags });
+      await updateNote(selectedNote.id, { tags: updatedTags });
       setSelectedNote({ ...selectedNote, tags: updatedTags });
     }
   };
 
-  const handleAddEntry = () => {
+  const handleAddEntry = async () => {
     if (selectedNote && newEntryContent.trim()) {
-      const entry = addEntry(selectedNote.id, newEntryContent.trim());
-      setSelectedNote({
-        ...selectedNote,
-        entries: [...selectedNote.entries, entry],
-      });
+      const entry = await addEntry(selectedNote.id, newEntryContent.trim());
+      if (entry) {
+        setSelectedNote({
+          ...selectedNote,
+          entries: [...selectedNote.entries, entry],
+        });
+      }
       setNewEntryContent('');
     }
   };
 
-  const handleDeleteEntry = (entryId: string) => {
+  const handleDeleteEntry = async (entryId: string) => {
     if (selectedNote) {
-      deleteEntry(selectedNote.id, entryId);
+      await deleteEntry(selectedNote.id, entryId);
       setSelectedNote({
         ...selectedNote,
         entries: selectedNote.entries.filter(e => e.id !== entryId),
       });
     }
+  };
+
+  const handleSelectNote = (note: Note) => {
+    setSelectedNote(note);
   };
 
   return (
@@ -173,7 +176,7 @@ export const NotesTool = () => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ delay: idx * 0.05 }}
-              onClick={() => setSelectedNote(note)}
+              onClick={() => handleSelectNote(note)}
               className="glass rounded-xl p-4 cursor-pointer hover:bg-secondary/50 transition-all group"
               style={{ borderLeftColor: note.color, borderLeftWidth: 3 }}
             >

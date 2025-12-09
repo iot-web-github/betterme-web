@@ -1,119 +1,167 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Habit, HabitLog } from '@/types/schedule';
-import { v4 as uuidv4 } from 'uuid';
-import { format, subDays, parseISO } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { format, subDays } from 'date-fns';
 
-const HABITS_STORAGE_KEY = 'smart-schedule-habits';
-const HABIT_LOGS_STORAGE_KEY = 'smart-schedule-habit-logs';
+export interface Habit {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  frequency: 'daily' | 'weekly';
+  targetDays?: number[];
+  createdAt: string;
+}
 
-const getStoredHabits = (): Habit[] => {
-  try {
-    const stored = localStorage.getItem(HABITS_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : getDefaultHabits();
-  } catch {
-    return getDefaultHabits();
-  }
-};
-
-const getStoredLogs = (): HabitLog[] => {
-  try {
-    const stored = localStorage.getItem(HABIT_LOGS_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
-
-const getDefaultHabits = (): Habit[] => [
-  { id: '1', name: 'Drink Water', icon: '💧', color: 'hsl(199 89% 48%)', frequency: 'daily', createdAt: new Date().toISOString() },
-  { id: '2', name: 'Exercise', icon: '🏃', color: 'hsl(142 76% 36%)', frequency: 'daily', createdAt: new Date().toISOString() },
-  { id: '3', name: 'Read', icon: '📚', color: 'hsl(38 92% 50%)', frequency: 'daily', createdAt: new Date().toISOString() },
-  { id: '4', name: 'Meditate', icon: '🧘', color: 'hsl(262 83% 58%)', frequency: 'daily', createdAt: new Date().toISOString() },
-  { id: '5', name: 'Sleep Early', icon: '😴', color: 'hsl(340 82% 52%)', frequency: 'daily', createdAt: new Date().toISOString() },
-];
-
-const saveHabits = (habits: Habit[]) => {
-  localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(habits));
-};
-
-const saveLogs = (logs: HabitLog[]) => {
-  localStorage.setItem(HABIT_LOGS_STORAGE_KEY, JSON.stringify(logs));
-};
+export interface HabitLog {
+  id: string;
+  habitId: string;
+  date: string;
+  completed: boolean;
+  notes?: string;
+  createdAt: string;
+}
 
 export const useHabits = () => {
+  const { user } = useAuth();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [logs, setLogs] = useState<HabitLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Fetch habits and logs from Supabase
   useEffect(() => {
-    setHabits(getStoredHabits());
-    setLogs(getStoredLogs());
-    setIsLoading(false);
-  }, []);
+    if (!user) {
+      setHabits([]);
+      setLogs([]);
+      setIsLoading(false);
+      return;
+    }
 
-  const addHabit = useCallback((data: Omit<Habit, 'id' | 'createdAt'>) => {
-    const newHabit: Habit = {
-      ...data,
-      id: uuidv4(),
-      createdAt: new Date().toISOString(),
+    const fetchData = async () => {
+      setIsLoading(true);
+      
+      const [habitsResult, logsResult] = await Promise.all([
+        supabase.from('habits').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
+        supabase.from('habit_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+      ]);
+
+      if (habitsResult.data) {
+        setHabits(habitsResult.data.map(h => ({
+          id: h.id,
+          name: h.name,
+          icon: h.icon,
+          color: h.color,
+          frequency: h.frequency as 'daily' | 'weekly',
+          targetDays: h.target_days || undefined,
+          createdAt: h.created_at,
+        })));
+      }
+
+      if (logsResult.data) {
+        setLogs(logsResult.data.map(l => ({
+          id: l.id,
+          habitId: l.habit_id,
+          date: l.date,
+          completed: l.completed,
+          notes: l.notes || undefined,
+          createdAt: l.created_at,
+        })));
+      }
+
+      setIsLoading(false);
     };
-    
-    setHabits(prev => {
-      const updated = [...prev, newHabit];
-      saveHabits(updated);
-      return updated;
-    });
-    
-    return newHabit;
-  }, []);
 
-  const deleteHabit = useCallback((habitId: string) => {
-    setHabits(prev => {
-      const updated = prev.filter(h => h.id !== habitId);
-      saveHabits(updated);
-      return updated;
-    });
-    
-    // Also delete related logs
-    setLogs(prev => {
-      const updated = prev.filter(l => l.habitId !== habitId);
-      saveLogs(updated);
-      return updated;
-    });
-  }, []);
+    fetchData();
+  }, [user]);
 
-  const toggleHabit = useCallback((habitId: string, date: string) => {
+  const addHabit = useCallback(async (data: Omit<Habit, 'id' | 'createdAt'>) => {
+    if (!user) return null;
+
+    const { data: newHabit, error } = await supabase.from('habits').insert({
+      user_id: user.id,
+      name: data.name,
+      icon: data.icon,
+      color: data.color,
+      frequency: data.frequency,
+      target_days: data.targetDays || null,
+    }).select().single();
+
+    if (error || !newHabit) {
+      console.error('Error adding habit:', error);
+      return null;
+    }
+
+    const habit: Habit = {
+      id: newHabit.id,
+      name: newHabit.name,
+      icon: newHabit.icon,
+      color: newHabit.color,
+      frequency: newHabit.frequency as 'daily' | 'weekly',
+      targetDays: newHabit.target_days || undefined,
+      createdAt: newHabit.created_at,
+    };
+
+    setHabits(prev => [...prev, habit]);
+    return habit;
+  }, [user]);
+
+  const deleteHabit = useCallback(async (habitId: string) => {
+    if (!user) return;
+
+    const { error } = await supabase.from('habits').delete().eq('id', habitId);
+    
+    if (error) {
+      console.error('Error deleting habit:', error);
+      return;
+    }
+
+    setHabits(prev => prev.filter(h => h.id !== habitId));
+    setLogs(prev => prev.filter(l => l.habitId !== habitId));
+  }, [user]);
+
+  const toggleHabit = useCallback(async (habitId: string, date: string) => {
+    if (!user) return;
+
     const existingLog = logs.find(l => l.habitId === habitId && l.date === date);
     
     if (existingLog) {
-      // Toggle existing
-      setLogs(prev => {
-        const updated = prev.map(l =>
-          l.id === existingLog.id
-            ? { ...l, completed: !l.completed }
-            : l
-        );
-        saveLogs(updated);
-        return updated;
-      });
+      // Toggle existing log
+      const { error } = await supabase
+        .from('habit_logs')
+        .update({ completed: !existingLog.completed })
+        .eq('id', existingLog.id);
+
+      if (error) {
+        console.error('Error updating habit log:', error);
+        return;
+      }
+
+      setLogs(prev => prev.map(l =>
+        l.id === existingLog.id ? { ...l, completed: !l.completed } : l
+      ));
     } else {
       // Create new log
-      const newLog: HabitLog = {
-        id: uuidv4(),
-        habitId,
+      const { data: newLog, error } = await supabase.from('habit_logs').insert({
+        user_id: user.id,
+        habit_id: habitId,
         date,
         completed: true,
-        syncStatus: 'pending',
-        createdAt: new Date().toISOString(),
-      };
-      
-      setLogs(prev => {
-        const updated = [...prev, newLog];
-        saveLogs(updated);
-        return updated;
-      });
+      }).select().single();
+
+      if (error || !newLog) {
+        console.error('Error creating habit log:', error);
+        return;
+      }
+
+      setLogs(prev => [...prev, {
+        id: newLog.id,
+        habitId: newLog.habit_id,
+        date: newLog.date,
+        completed: newLog.completed,
+        createdAt: newLog.created_at,
+      }]);
     }
-  }, [logs]);
+  }, [user, logs]);
 
   const getLogsForDate = useCallback((date: string): HabitLog[] => {
     return logs.filter(l => l.date === date);

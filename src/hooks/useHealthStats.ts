@@ -1,81 +1,129 @@
 import { useState, useEffect, useCallback } from 'react';
-import { HealthLog } from '@/types/tools';
-import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, parseISO } from 'date-fns';
 
-const STORAGE_KEY = 'smart-schedule-health';
-
-const getStoredLogs = (): HealthLog[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveLogs = (logs: HealthLog[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
-};
+export interface HealthLog {
+  id: string;
+  date: string;
+  waterIntake: number;
+  calories?: number;
+  exerciseMinutes: number;
+  steps?: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export const useHealthStats = () => {
+  const { user } = useAuth();
   const [logs, setLogs] = useState<HealthLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setLogs(getStoredLogs());
-    setIsLoading(false);
-  }, []);
+    if (!user) {
+      setLogs([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchLogs = async () => {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('health_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+
+      if (data && !error) {
+        setLogs(data.map(l => ({
+          id: l.id,
+          date: l.date,
+          waterIntake: l.water_intake || 0,
+          calories: l.calories || undefined,
+          exerciseMinutes: l.exercise_minutes || 0,
+          steps: l.steps || undefined,
+          createdAt: l.created_at,
+          updatedAt: l.updated_at,
+        })));
+      }
+      
+      setIsLoading(false);
+    };
+
+    fetchLogs();
+  }, [user]);
 
   const getLogForDate = useCallback((date: string): HealthLog | undefined => {
     return logs.find(l => l.date === date);
   }, [logs]);
 
-  const saveLog = useCallback((data: {
+  const saveLog = useCallback(async (data: {
     date: string;
     waterIntake?: number;
     calories?: number;
     exerciseMinutes?: number;
     steps?: number;
   }) => {
+    if (!user) return;
+
     const existing = logs.find(l => l.date === data.date);
     
     if (existing) {
-      setLogs(prev => {
-        const updated = prev.map(l =>
-          l.date === data.date
-            ? { 
-                ...l, 
-                waterIntake: data.waterIntake ?? l.waterIntake,
-                calories: data.calories ?? l.calories,
-                exerciseMinutes: data.exerciseMinutes ?? l.exerciseMinutes,
-                steps: data.steps ?? l.steps,
-                updatedAt: new Date().toISOString() 
-              }
-            : l
-        );
-        saveLogs(updated);
-        return updated;
-      });
-    } else {
-      const newLog: HealthLog = {
-        id: uuidv4(),
-        date: data.date,
-        waterIntake: data.waterIntake || 0,
-        calories: data.calories,
-        exerciseMinutes: data.exerciseMinutes || 0,
-        steps: data.steps,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      const { error } = await supabase
+        .from('health_logs')
+        .update({
+          water_intake: data.waterIntake ?? existing.waterIntake,
+          calories: data.calories ?? existing.calories,
+          exercise_minutes: data.exerciseMinutes ?? existing.exerciseMinutes,
+          steps: data.steps ?? existing.steps,
+        })
+        .eq('id', existing.id);
 
-      setLogs(prev => {
-        const updated = [...prev, newLog];
-        saveLogs(updated);
-        return updated;
-      });
+      if (error) {
+        console.error('Error updating health log:', error);
+        return;
+      }
+
+      setLogs(prev => prev.map(l =>
+        l.date === data.date
+          ? { 
+              ...l, 
+              waterIntake: data.waterIntake ?? l.waterIntake,
+              calories: data.calories ?? l.calories,
+              exerciseMinutes: data.exerciseMinutes ?? l.exerciseMinutes,
+              steps: data.steps ?? l.steps,
+              updatedAt: new Date().toISOString() 
+            }
+          : l
+      ));
+    } else {
+      const { data: newLog, error } = await supabase.from('health_logs').insert({
+        user_id: user.id,
+        date: data.date,
+        water_intake: data.waterIntake || 0,
+        calories: data.calories || null,
+        exercise_minutes: data.exerciseMinutes || 0,
+        steps: data.steps || null,
+      }).select().single();
+
+      if (error || !newLog) {
+        console.error('Error creating health log:', error);
+        return;
+      }
+
+      setLogs(prev => [...prev, {
+        id: newLog.id,
+        date: newLog.date,
+        waterIntake: newLog.water_intake || 0,
+        calories: newLog.calories || undefined,
+        exerciseMinutes: newLog.exercise_minutes || 0,
+        steps: newLog.steps || undefined,
+        createdAt: newLog.created_at,
+        updatedAt: newLog.updated_at,
+      }]);
     }
-  }, [logs]);
+  }, [user, logs]);
 
   const addWater = useCallback((date: string) => {
     const existing = logs.find(l => l.date === date);

@@ -1,71 +1,116 @@
 import { useState, useEffect, useCallback } from 'react';
-import { MoodEntry } from '@/types/tools';
-import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, parseISO } from 'date-fns';
 
-const STORAGE_KEY = 'smart-schedule-mood-entries';
+export interface MoodEntry {
+  id: string;
+  date: string;
+  time: string;
+  level: 1 | 2 | 3 | 4 | 5;
+  triggers: string[];
+  reasons: string;
+  createdAt: string;
+}
 
 const MOOD_TRIGGERS = [
   'Work', 'Family', 'Health', 'Weather', 'Sleep', 'Exercise',
   'Social', 'Food', 'Stress', 'Achievement', 'Relationship', 'Money'
 ];
 
-const getStoredEntries = (): MoodEntry[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveEntries = (entries: MoodEntry[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-};
-
 export const useMoodTracker = () => {
+  const { user } = useAuth();
   const [entries, setEntries] = useState<MoodEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setEntries(getStoredEntries());
-    setIsLoading(false);
-  }, []);
+    if (!user) {
+      setEntries([]);
+      setIsLoading(false);
+      return;
+    }
 
-  const addEntry = useCallback((data: {
+    const fetchEntries = async () => {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('mood_entries')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .order('time', { ascending: false });
+
+      if (data && !error) {
+        setEntries(data.map(e => ({
+          id: e.id,
+          date: e.date,
+          time: e.time,
+          level: e.level as 1 | 2 | 3 | 4 | 5,
+          triggers: e.triggers || [],
+          reasons: e.reasons || '',
+          createdAt: e.created_at,
+        })));
+      }
+      
+      setIsLoading(false);
+    };
+
+    fetchEntries();
+  }, [user]);
+
+  const addEntry = useCallback(async (data: {
     level: 1 | 2 | 3 | 4 | 5;
     triggers?: string[];
     reasons?: string;
     date?: string;
     time?: string;
-  }): MoodEntry => {
+  }): Promise<MoodEntry | null> => {
+    if (!user) return null;
+
     const now = new Date();
-    const newEntry: MoodEntry = {
-      id: uuidv4(),
-      date: data.date || format(now, 'yyyy-MM-dd'),
-      time: data.time || format(now, 'HH:mm'),
+    const entryDate = data.date || format(now, 'yyyy-MM-dd');
+    const entryTime = data.time || format(now, 'HH:mm');
+
+    const { data: newEntry, error } = await supabase.from('mood_entries').insert({
+      user_id: user.id,
+      date: entryDate,
+      time: entryTime,
       level: data.level,
       triggers: data.triggers || [],
       reasons: data.reasons || '',
-      createdAt: now.toISOString(),
+    }).select().single();
+
+    if (error || !newEntry) {
+      console.error('Error adding mood entry:', error);
+      return null;
+    }
+
+    const entry: MoodEntry = {
+      id: newEntry.id,
+      date: newEntry.date,
+      time: newEntry.time,
+      level: newEntry.level as 1 | 2 | 3 | 4 | 5,
+      triggers: newEntry.triggers || [],
+      reasons: newEntry.reasons || '',
+      createdAt: newEntry.created_at,
     };
 
-    setEntries(prev => {
-      const updated = [newEntry, ...prev];
-      saveEntries(updated);
-      return updated;
-    });
+    setEntries(prev => [entry, ...prev]);
+    return entry;
+  }, [user]);
 
-    return newEntry;
-  }, []);
+  const deleteEntry = useCallback(async (entryId: string) => {
+    if (!user) return;
 
-  const deleteEntry = useCallback((entryId: string) => {
-    setEntries(prev => {
-      const updated = prev.filter(e => e.id !== entryId);
-      saveEntries(updated);
-      return updated;
-    });
-  }, []);
+    const { error } = await supabase.from('mood_entries').delete().eq('id', entryId);
+    
+    if (error) {
+      console.error('Error deleting mood entry:', error);
+      return;
+    }
+
+    setEntries(prev => prev.filter(e => e.id !== entryId));
+  }, [user]);
 
   const getEntriesForDate = useCallback((date: string): MoodEntry[] => {
     return entries.filter(e => e.date === date).sort((a, b) => 
@@ -122,8 +167,6 @@ export const useMoodTracker = () => {
     sleepCorrelation: number | null;
     exerciseCorrelation: number | null;
   } => {
-    // This would integrate with other trackers
-    // Simplified version returning null for now
     return {
       sleepCorrelation: null,
       exerciseCorrelation: null,

@@ -1,68 +1,162 @@
 import { useState, useEffect, useCallback } from 'react';
-import { DailyCheckIn, LifeMetrics, MoodLevel, EnergyLevel, StressLevel } from '@/types/schedule';
-import { v4 as uuidv4 } from 'uuid';
-import { subDays, parseISO, differenceInMinutes, format } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { subDays, parseISO, format } from 'date-fns';
 
-const STORAGE_KEY = 'smart-schedule-checkins';
+export type MoodLevel = 1 | 2 | 3 | 4 | 5;
+export type EnergyLevel = 1 | 2 | 3 | 4 | 5;
+export type StressLevel = 1 | 2 | 3 | 4 | 5;
 
-const getStoredCheckIns = (): DailyCheckIn[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
+export interface DailyCheckIn {
+  id: string;
+  date: string;
+  wakeUpTime: string;
+  sleepTime: string;
+  phoneUsage: number;
+  mood: MoodLevel;
+  energy: EnergyLevel;
+  stress: StressLevel;
+  waterIntake: number;
+  exercise: boolean;
+  exerciseDuration?: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-const saveCheckIns = (checkIns: DailyCheckIn[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(checkIns));
-};
+export interface LifeMetrics {
+  averageMood: number;
+  averageEnergy: number;
+  averageStress: number;
+  averageSleep: number;
+  averagePhoneUsage: number;
+  exerciseDays: number;
+  waterAverage: number;
+}
 
 export const useLifeTracking = () => {
+  const { user } = useAuth();
   const [checkIns, setCheckIns] = useState<DailyCheckIn[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const stored = getStoredCheckIns();
-    setCheckIns(stored);
-    setIsLoading(false);
-  }, []);
+    if (!user) {
+      setCheckIns([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchCheckIns = async () => {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('daily_checkins')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+
+      if (data && !error) {
+        setCheckIns(data.map(c => ({
+          id: c.id,
+          date: c.date,
+          wakeUpTime: c.wake_up_time || '',
+          sleepTime: c.sleep_time || '',
+          phoneUsage: c.phone_usage || 0,
+          mood: (c.mood || 3) as MoodLevel,
+          energy: (c.energy || 3) as EnergyLevel,
+          stress: (c.stress || 3) as StressLevel,
+          waterIntake: c.water_intake || 0,
+          exercise: c.exercise || false,
+          exerciseDuration: c.exercise_duration || undefined,
+          notes: c.notes || undefined,
+          createdAt: c.created_at,
+          updatedAt: c.updated_at,
+        })));
+      }
+      
+      setIsLoading(false);
+    };
+
+    fetchCheckIns();
+  }, [user]);
 
   const getCheckInForDate = useCallback((date: string): DailyCheckIn | undefined => {
     return checkIns.find(c => c.date === date);
   }, [checkIns]);
 
-  const saveCheckIn = useCallback((data: Omit<DailyCheckIn, 'id' | 'syncStatus' | 'createdAt' | 'updatedAt'>) => {
+  const saveCheckIn = useCallback(async (data: Omit<DailyCheckIn, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) return;
+
     const existing = checkIns.find(c => c.date === data.date);
     
     if (existing) {
       // Update existing
-      setCheckIns(prev => {
-        const updated = prev.map(c =>
-          c.date === data.date
-            ? { ...c, ...data, updatedAt: new Date().toISOString() }
-            : c
-        );
-        saveCheckIns(updated);
-        return updated;
-      });
+      const { error } = await supabase
+        .from('daily_checkins')
+        .update({
+          wake_up_time: data.wakeUpTime,
+          sleep_time: data.sleepTime,
+          phone_usage: data.phoneUsage,
+          mood: data.mood,
+          energy: data.energy,
+          stress: data.stress,
+          water_intake: data.waterIntake,
+          exercise: data.exercise,
+          exercise_duration: data.exerciseDuration,
+          notes: data.notes,
+        })
+        .eq('id', existing.id);
+
+      if (error) {
+        console.error('Error updating check-in:', error);
+        return;
+      }
+
+      setCheckIns(prev => prev.map(c =>
+        c.date === data.date
+          ? { ...c, ...data, updatedAt: new Date().toISOString() }
+          : c
+      ));
     } else {
       // Create new
-      const newCheckIn: DailyCheckIn = {
-        ...data,
-        id: uuidv4(),
-        syncStatus: 'pending',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      
-      setCheckIns(prev => {
-        const updated = [...prev, newCheckIn];
-        saveCheckIns(updated);
-        return updated;
-      });
+      const { data: newCheckIn, error } = await supabase.from('daily_checkins').insert({
+        user_id: user.id,
+        date: data.date,
+        wake_up_time: data.wakeUpTime,
+        sleep_time: data.sleepTime,
+        phone_usage: data.phoneUsage,
+        mood: data.mood,
+        energy: data.energy,
+        stress: data.stress,
+        water_intake: data.waterIntake,
+        exercise: data.exercise,
+        exercise_duration: data.exerciseDuration,
+        notes: data.notes,
+      }).select().single();
+
+      if (error || !newCheckIn) {
+        console.error('Error creating check-in:', error);
+        return;
+      }
+
+      setCheckIns(prev => [...prev, {
+        id: newCheckIn.id,
+        date: newCheckIn.date,
+        wakeUpTime: newCheckIn.wake_up_time || '',
+        sleepTime: newCheckIn.sleep_time || '',
+        phoneUsage: newCheckIn.phone_usage || 0,
+        mood: (newCheckIn.mood || 3) as MoodLevel,
+        energy: (newCheckIn.energy || 3) as EnergyLevel,
+        stress: (newCheckIn.stress || 3) as StressLevel,
+        waterIntake: newCheckIn.water_intake || 0,
+        exercise: newCheckIn.exercise || false,
+        exerciseDuration: newCheckIn.exercise_duration || undefined,
+        notes: newCheckIn.notes || undefined,
+        createdAt: newCheckIn.created_at,
+        updatedAt: newCheckIn.updated_at,
+      }]);
     }
-  }, [checkIns]);
+  }, [user, checkIns]);
 
   const getWeeklyStats = useCallback((): LifeMetrics => {
     const today = new Date();
@@ -99,9 +193,8 @@ export const useLifeTracking = () => {
         const sleepParts = c.sleepTime.split(':').map(Number);
         const wakeParts = c.wakeUpTime.split(':').map(Number);
         
-        // Assume sleep is previous night
         let sleepMinutes = (wakeParts[0] * 60 + wakeParts[1]) - (sleepParts[0] * 60 + sleepParts[1]);
-        if (sleepMinutes < 0) sleepMinutes += 24 * 60; // Crossed midnight
+        if (sleepMinutes < 0) sleepMinutes += 24 * 60;
         totalSleepMinutes += sleepMinutes;
       }
     });

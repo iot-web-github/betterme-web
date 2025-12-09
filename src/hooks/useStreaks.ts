@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Task } from '@/types/schedule';
-import { format, subDays, differenceInDays, startOfDay } from 'date-fns';
-
-const STREAKS_KEY = 'smart-schedule-streaks';
-const ACHIEVEMENTS_KEY = 'smart-schedule-achievements';
+import { format, subDays } from 'date-fns';
 
 export interface Achievement {
   id: string;
@@ -36,39 +35,60 @@ const ACHIEVEMENTS_CONFIG: Achievement[] = [
   { id: 'perfect-10', name: 'Perfect Ten', description: '10 perfect days', icon: '🌟', requirement: 10, type: 'productivity' },
 ];
 
-const getStoredStreaks = (): StreakData => {
-  try {
-    const stored = localStorage.getItem(STREAKS_KEY);
-    return stored ? JSON.parse(stored) : {
-      currentStreak: 0,
-      longestStreak: 0,
-      lastActiveDate: null,
-      totalTasksCompleted: 0,
-      perfectDays: 0,
-    };
-  } catch {
-    return {
-      currentStreak: 0,
-      longestStreak: 0,
-      lastActiveDate: null,
-      totalTasksCompleted: 0,
-      perfectDays: 0,
-    };
-  }
-};
-
-const getStoredAchievements = (): string[] => {
-  try {
-    const stored = localStorage.getItem(ACHIEVEMENTS_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
-
 export const useStreaks = (allTasks: Task[]) => {
-  const [streakData, setStreakData] = useState<StreakData>(getStoredStreaks);
-  const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>(getStoredAchievements);
+  const { user } = useAuth();
+  const [streakData, setStreakData] = useState<StreakData>({
+    currentStreak: 0,
+    longestStreak: 0,
+    lastActiveDate: null,
+    totalTasksCompleted: 0,
+    perfectDays: 0,
+  });
+  const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch streaks and achievements from Supabase
+  useEffect(() => {
+    if (!user) {
+      setStreakData({
+        currentStreak: 0,
+        longestStreak: 0,
+        lastActiveDate: null,
+        totalTasksCompleted: 0,
+        perfectDays: 0,
+      });
+      setUnlockedAchievements([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchData = async () => {
+      setIsLoading(true);
+      
+      const [streaksResult, achievementsResult] = await Promise.all([
+        supabase.from('user_streaks').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('user_achievements').select('achievement_id').eq('user_id', user.id),
+      ]);
+
+      if (streaksResult.data) {
+        setStreakData({
+          currentStreak: streaksResult.data.current_streak || 0,
+          longestStreak: streaksResult.data.longest_streak || 0,
+          lastActiveDate: streaksResult.data.last_active_date,
+          totalTasksCompleted: streaksResult.data.total_tasks_completed || 0,
+          perfectDays: streaksResult.data.perfect_days || 0,
+        });
+      }
+
+      if (achievementsResult.data) {
+        setUnlockedAchievements(achievementsResult.data.map(a => a.achievement_id));
+      }
+
+      setIsLoading(false);
+    };
+
+    fetchData();
+  }, [user]);
 
   const calculateStreakFromTasks = useCallback(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -83,20 +103,17 @@ export const useStreaks = (allTasks: Task[]) => {
     let currentStreak = 0;
     let checkDate = new Date();
     
-    // Check if today or yesterday has activity
     const todayStr = format(checkDate, 'yyyy-MM-dd');
     const yesterdayStr = format(subDays(checkDate, 1), 'yyyy-MM-dd');
     
     if (!completedDates.has(todayStr) && !completedDates.has(yesterdayStr)) {
-      return { currentStreak: 0, lastActiveDate: null };
+      return { currentStreak: 0, lastActiveDate: null, totalTasksCompleted: 0, perfectDays: 0 };
     }
 
-    // Start from today or yesterday
     if (!completedDates.has(todayStr)) {
       checkDate = subDays(checkDate, 1);
     }
 
-    // Count consecutive days
     while (completedDates.has(format(checkDate, 'yyyy-MM-dd'))) {
       currentStreak++;
       checkDate = subDays(checkDate, 1);
@@ -106,7 +123,6 @@ export const useStreaks = (allTasks: Task[]) => {
       t.status === 'completed' || t.status === 'completed-on-time'
     ).length;
 
-    // Calculate perfect days
     const tasksByDate = new Map<string, Task[]>();
     allTasks.forEach(task => {
       const tasks = tasksByDate.get(task.date) || [];
@@ -134,54 +150,86 @@ export const useStreaks = (allTasks: Task[]) => {
     };
   }, [allTasks]);
 
+  // Update streaks when tasks change
   useEffect(() => {
+    if (!user || isLoading) return;
+
     const calculated = calculateStreakFromTasks();
-    setStreakData(prev => {
-      const newData = {
-        ...prev,
-        currentStreak: calculated.currentStreak,
-        lastActiveDate: calculated.lastActiveDate,
-        totalTasksCompleted: calculated.totalTasksCompleted,
-        perfectDays: calculated.perfectDays,
-        longestStreak: Math.max(prev.longestStreak, calculated.currentStreak),
-      };
-      localStorage.setItem(STREAKS_KEY, JSON.stringify(newData));
-      return newData;
-    });
-  }, [calculateStreakFromTasks]);
+    const newData = {
+      currentStreak: calculated.currentStreak,
+      lastActiveDate: calculated.lastActiveDate,
+      totalTasksCompleted: calculated.totalTasksCompleted,
+      perfectDays: calculated.perfectDays,
+      longestStreak: Math.max(streakData.longestStreak, calculated.currentStreak),
+    };
+
+    // Only update if changed
+    if (
+      newData.currentStreak !== streakData.currentStreak ||
+      newData.totalTasksCompleted !== streakData.totalTasksCompleted ||
+      newData.perfectDays !== streakData.perfectDays
+    ) {
+      setStreakData(newData);
+
+      // Sync to Supabase
+      supabase.from('user_streaks').upsert({
+        user_id: user.id,
+        current_streak: newData.currentStreak,
+        longest_streak: newData.longestStreak,
+        last_active_date: newData.lastActiveDate,
+        total_tasks_completed: newData.totalTasksCompleted,
+        perfect_days: newData.perfectDays,
+      }, { onConflict: 'user_id' }).then(({ error }) => {
+        if (error) console.error('Error syncing streaks:', error);
+      });
+    }
+  }, [user, allTasks, calculateStreakFromTasks, isLoading]);
 
   // Check for new achievements
   useEffect(() => {
-    const newUnlocked: string[] = [...unlockedAchievements];
-    let hasNew = false;
+    if (!user || isLoading) return;
 
-    ACHIEVEMENTS_CONFIG.forEach(achievement => {
-      if (newUnlocked.includes(achievement.id)) return;
+    const checkAchievements = async () => {
+      const newUnlocked: string[] = [];
 
-      let shouldUnlock = false;
-      switch (achievement.type) {
-        case 'streak':
-          shouldUnlock = streakData.currentStreak >= achievement.requirement;
-          break;
-        case 'tasks':
-          shouldUnlock = streakData.totalTasksCompleted >= achievement.requirement;
-          break;
-        case 'productivity':
-          shouldUnlock = streakData.perfectDays >= achievement.requirement;
-          break;
+      for (const achievement of ACHIEVEMENTS_CONFIG) {
+        if (unlockedAchievements.includes(achievement.id)) continue;
+
+        let shouldUnlock = false;
+        switch (achievement.type) {
+          case 'streak':
+            shouldUnlock = streakData.currentStreak >= achievement.requirement;
+            break;
+          case 'tasks':
+            shouldUnlock = streakData.totalTasksCompleted >= achievement.requirement;
+            break;
+          case 'productivity':
+            shouldUnlock = streakData.perfectDays >= achievement.requirement;
+            break;
+        }
+
+        if (shouldUnlock) {
+          newUnlocked.push(achievement.id);
+        }
       }
 
-      if (shouldUnlock) {
-        newUnlocked.push(achievement.id);
-        hasNew = true;
-      }
-    });
+      if (newUnlocked.length > 0) {
+        // Insert new achievements
+        const inserts = newUnlocked.map(id => ({
+          user_id: user.id,
+          achievement_id: id,
+        }));
 
-    if (hasNew) {
-      setUnlockedAchievements(newUnlocked);
-      localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(newUnlocked));
-    }
-  }, [streakData, unlockedAchievements]);
+        const { error } = await supabase.from('user_achievements').insert(inserts);
+        
+        if (!error) {
+          setUnlockedAchievements(prev => [...prev, ...newUnlocked]);
+        }
+      }
+    };
+
+    checkAchievements();
+  }, [user, streakData, unlockedAchievements, isLoading]);
 
   const achievements = useMemo(() => {
     return ACHIEVEMENTS_CONFIG.map(a => ({

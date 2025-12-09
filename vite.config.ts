@@ -17,9 +17,9 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "placeholder.svg"],
       manifest: {
-        name: "SmartSchedule - Productivity Coach",
-        short_name: "SmartSchedule",
-        description: "Your personal productivity coach for building disciplined routines",
+        name: "BetterMe - Personal Growth Companion",
+        short_name: "BetterMe",
+        description: "Your personal growth companion for building disciplined routines and tracking wellness",
         theme_color: "#6366f1",
         background_color: "#0a0a0b",
         display: "standalone",

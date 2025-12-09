@@ -144,8 +144,8 @@ export const exportUserDataAsZip = async (userId: string): Promise<void> => {
   zip.file('export_summary.json', JSON.stringify(summary, null, 2));
   
   // Add README
-  const readme = `SmartSchedule Data Export
-========================
+  const readme = `BetterMe Data Export
+====================
 Export Date: ${format(new Date(), 'MMMM d, yyyy')}
 
 Contents:
@@ -172,7 +172,7 @@ This data is yours and can be imported into other applications or kept for your 
   
   const link = document.createElement('a');
   link.href = url;
-  link.download = `smartschedule-export-${dateStr}.zip`;
+  link.download = `betterme-export-${dateStr}.zip`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

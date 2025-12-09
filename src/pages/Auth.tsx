@@ -108,7 +108,8 @@ const Auth = () => {
             toast.error(error.message);
           }
         } else {
-          toast.success('Account created! Please check your email to verify.');
+          toast.success('Welcome to BetterMe! 🎉');
+          navigate('/');
         }
       }
     } finally {
@@ -158,7 +159,7 @@ const Auth = () => {
               <Sparkles className="w-4 h-4 text-warning drop-shadow-lg" />
             </motion.div>
           </motion.div>
-          <h1 className="text-2xl font-display font-bold gradient-text mb-1">SmartSchedule</h1>
+          <h1 className="text-2xl font-display font-bold gradient-text mb-1">BetterMe</h1>
           <p className="text-sm text-muted-foreground">
             {isLogin ? 'Welcome back! Sign in to continue.' : 'Create your account to get started.'}
           </p>

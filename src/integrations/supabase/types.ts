@@ -161,6 +161,44 @@ export type Database = {
         }
         Relationships: []
       }
+      goal_progress: {
+        Row: {
+          created_at: string
+          date: string
+          goal_id: string
+          id: string
+          notes: string | null
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          goal_id: string
+          id?: string
+          notes?: string | null
+          user_id: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          goal_id?: string
+          id?: string
+          notes?: string | null
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_progress_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "user_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goals: {
         Row: {
           created_at: string
@@ -337,6 +375,30 @@ export type Database = {
           time?: string
           triggers?: string[] | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      motivational_quotes: {
+        Row: {
+          author: string | null
+          category: string | null
+          created_at: string
+          id: string
+          quote: string
+        }
+        Insert: {
+          author?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          quote: string
+        }
+        Update: {
+          author?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          quote?: string
         }
         Relationships: []
       }
@@ -580,6 +642,60 @@ export type Database = {
           achievement_id?: string
           id?: string
           unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_goals: {
+        Row: {
+          created_at: string
+          current_value: number | null
+          description: string | null
+          end_date: string | null
+          frequency: string
+          goal_type: string
+          id: string
+          is_active: boolean | null
+          is_completed: boolean | null
+          start_date: string
+          target_value: number | null
+          title: string
+          unit: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_value?: number | null
+          description?: string | null
+          end_date?: string | null
+          frequency: string
+          goal_type: string
+          id?: string
+          is_active?: boolean | null
+          is_completed?: boolean | null
+          start_date?: string
+          target_value?: number | null
+          title: string
+          unit?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_value?: number | null
+          description?: string | null
+          end_date?: string | null
+          frequency?: string
+          goal_type?: string
+          id?: string
+          is_active?: boolean | null
+          is_completed?: boolean | null
+          start_date?: string
+          target_value?: number | null
+          title?: string
+          unit?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

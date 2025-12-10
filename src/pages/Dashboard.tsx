@@ -13,6 +13,10 @@ import { LifeScoreCard } from '@/components/dashboard/LifeScoreCard';
 import { CorrelationInsights } from '@/components/dashboard/CorrelationInsights';
 import { DataExportCard } from '@/components/dashboard/DataExportCard';
 import { CelebrationModal, useCelebrations } from '@/components/dashboard/CelebrationModal';
+import { AdvancedSleepAnalytics } from '@/components/dashboard/AdvancedSleepAnalytics';
+import { TimeFilteredInsights } from '@/components/dashboard/TimeFilteredInsights';
+import { BehavioralTrends } from '@/components/dashboard/BehavioralTrends';
+import { GoalSettingCard } from '@/components/dashboard/GoalSettingCard';
 import { useSchedule } from '@/hooks/useSchedule';
 import { useStreaks } from '@/hooks/useStreaks';
 import { useAuth } from '@/hooks/useAuth';
@@ -86,23 +90,31 @@ const Dashboard = () => {
 
         {/* Main Grid */}
         <div className="grid lg:grid-cols-3 gap-4">
-          {/* Left Column - Charts */}
+          {/* Left Column - Charts & Analytics */}
           <div className="lg:col-span-2 space-y-4">
-            <WeeklyTrends tasks={allTasks} />
+            {/* Time-Filtered Insights */}
+            <TimeFilteredInsights />
+            
+            {/* Sleep Analytics */}
+            <AdvancedSleepAnalytics />
+            
+            {/* Behavioral Trends */}
+            <BehavioralTrends />
             
             <div className="grid sm:grid-cols-2 gap-4">
               <ProductiveHours tasks={allTasks} />
               <CategoryBreakdown timeByCategory={dailyStats.timeByCategory} />
             </div>
 
-            {/* Correlation Insights - Full Width */}
-            <CorrelationInsights />
+            <WeeklyTrends tasks={allTasks} />
           </div>
 
           {/* Right Column - Sidebar */}
           <div className="space-y-4">
             <LifeScoreCard />
+            <GoalSettingCard />
             <StreakCard streakData={streakData} />
+            <CorrelationInsights />
             <DataExportCard />
             <UpcomingTasks tasks={allTasks} limit={5} />
           </div>

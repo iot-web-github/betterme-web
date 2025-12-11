@@ -8,17 +8,20 @@ import { TaskForm } from '@/components/schedule/TaskForm';
 import { TaskDetailSheet } from '@/components/schedule/TaskDetailSheet';
 import { DailyScheduleManager } from '@/components/schedule/DailyScheduleManager';
 import { FocusMode } from '@/components/schedule/FocusMode';
-import { ProductivityScore } from '@/components/dashboard/ProductivityScore';
-import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
+import { WelcomeCard } from '@/components/home/WelcomeCard';
+import { QuickStatsBar } from '@/components/home/QuickStatsBar';
+import { GoalsOverview } from '@/components/home/GoalsOverview';
 import { StreakCard } from '@/components/dashboard/StreakCard';
 import { MiniCalendar } from '@/components/dashboard/MiniCalendar';
 import { ToolsGrid } from '@/components/dashboard/ToolsGrid';
 import { HabitsSection } from '@/components/home/HabitsSection';
+
 import { WeeklyView } from '@/components/views/WeeklyView';
 import { MonthlyView } from '@/components/views/MonthlyView';
 import { useSchedule } from '@/hooks/useSchedule';
 import { useStreaks } from '@/hooks/useStreaks';
 import { useDailySchedule } from '@/hooks/useDailySchedule';
+
 import { Task, ScheduleTemplate } from '@/types/schedule';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -44,7 +47,6 @@ const Index = () => {
     updateTask,
     updateTaskStatus,
     deleteTask,
-    dailyStats,
   } = useSchedule(selectedDate);
 
   const { streakData } = useStreaks(allTasks);
@@ -135,12 +137,19 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        {/* Top Bar */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+        {/* Welcome Card */}
+        <WelcomeCard />
+
+
+        {/* Quick Stats */}
+        <QuickStatsBar />
+
+        {/* Top Bar with Date & View Toggle */}
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4"
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
         >
           <DateSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
           
@@ -194,7 +203,7 @@ const Index = () => {
                     </Button>
                   </div>
 
-                  <div className="h-[500px] overflow-y-auto scrollbar-thin pr-1">
+                  <div className="h-[400px] overflow-y-auto scrollbar-thin pr-1">
                     {tasks.length === 0 ? (
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.95 }}
@@ -202,16 +211,16 @@ const Index = () => {
                         className="flex flex-col items-center justify-center h-full text-center"
                       >
                         <motion.div 
-                          className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mb-3"
+                          className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mb-3"
                           animate={{ scale: [1, 1.03, 1] }}
                           transition={{ duration: 2, repeat: Infinity }}
                         >
-                          <Clock className="w-8 h-8 text-muted-foreground" />
+                          <Clock className="w-7 h-7 text-muted-foreground" />
                         </motion.div>
-                        <h3 className="text-base font-display font-semibold text-foreground mb-1">
+                        <h3 className="text-sm font-display font-semibold text-foreground mb-1">
                           No tasks scheduled
                         </h3>
-                        <p className="text-xs text-muted-foreground mb-3 max-w-xs">
+                        <p className="text-xs text-muted-foreground mb-3">
                           Start planning your day
                         </p>
                         <Button variant="outline" size="sm" onClick={() => setShowTaskForm(true)} className="gap-1.5 h-8 text-xs">
@@ -271,6 +280,9 @@ const Index = () => {
             {/* Habits Section */}
             <HabitsSection />
 
+            {/* Goals Overview */}
+            <GoalsOverview />
+
             {/* Quick Actions */}
             <ToolsGrid onFocusModeClick={() => setShowFocusMode(true)} />
 
@@ -295,10 +307,6 @@ const Index = () => {
             />
 
             <StreakCard streakData={streakData} />
-            
-            <ProductivityScore score={dailyStats.productivityScore} />
-
-            <CategoryBreakdown timeByCategory={dailyStats.timeByCategory} />
           </div>
         </div>
       </main>

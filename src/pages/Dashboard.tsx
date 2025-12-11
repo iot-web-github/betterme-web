@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
 import { Header } from '@/components/layout/Header';
+import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { WeeklyTrends } from '@/components/dashboard/WeeklyTrends';
 import { UpcomingTasks } from '@/components/dashboard/UpcomingTasks';
 import { ProductiveHours } from '@/components/dashboard/ProductiveHours';
-import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
 import { StreakCard } from '@/components/dashboard/StreakCard';
 import { LifeScoreCard } from '@/components/dashboard/LifeScoreCard';
 import { CorrelationInsights } from '@/components/dashboard/CorrelationInsights';
@@ -17,19 +15,18 @@ import { AdvancedSleepAnalytics } from '@/components/dashboard/AdvancedSleepAnal
 import { TimeFilteredInsights } from '@/components/dashboard/TimeFilteredInsights';
 import { BehavioralTrends } from '@/components/dashboard/BehavioralTrends';
 import { GoalSettingCard } from '@/components/dashboard/GoalSettingCard';
+import { AchievementsCard } from '@/components/dashboard/AchievementsCard';
 import { useSchedule } from '@/hooks/useSchedule';
 import { useStreaks } from '@/hooks/useStreaks';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { LayoutGrid, TrendingUp, User } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BarChart3, Target, TrendingUp, Award } from 'lucide-react';
 
 const Dashboard = () => {
   const today = new Date().toISOString().split('T')[0];
   const [selectedDate] = useState(today);
-  const { user } = useAuth();
   
   const { allTasks, dailyStats } = useSchedule(selectedDate);
-  const { streakData } = useStreaks(allTasks);
+  const { streakData, achievements } = useStreaks(allTasks);
   const { celebration, checkStreakMilestone, checkTaskMilestone, closeCelebration } = useCelebrations();
 
   useEffect(() => {
@@ -48,77 +45,103 @@ const Dashboard = () => {
       <Header />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        {/* Page Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-info flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-display font-bold text-foreground">Dashboard</h1>
-              <p className="text-xs text-muted-foreground">
-                Insights & Analytics • {format(new Date(), 'MMMM yyyy')}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {user && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl glass border border-border/20">
-                <User className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-[180px]">
-                  {user.email}
-                </span>
-              </div>
-            )}
-            <Link to="/">
-              <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Schedule</span>
-              </Button>
-            </Link>
-          </div>
-        </motion.div>
+        {/* Dashboard Header */}
+        <DashboardHeader />
 
         {/* Stats Overview */}
         <section className="mb-6">
           <DashboardStats tasks={allTasks} />
         </section>
 
-        {/* Main Grid */}
-        <div className="grid lg:grid-cols-3 gap-4">
-          {/* Left Column - Charts & Analytics */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Time-Filtered Insights */}
-            <TimeFilteredInsights />
-            
-            {/* Sleep Analytics */}
-            <AdvancedSleepAnalytics />
-            
-            {/* Behavioral Trends */}
-            <BehavioralTrends />
-            
-            <div className="grid sm:grid-cols-2 gap-4">
-              <ProductiveHours tasks={allTasks} />
-              <CategoryBreakdown timeByCategory={dailyStats.timeByCategory} />
+        {/* Tabbed Content */}
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList className="glass border border-border/20 p-1">
+            <TabsTrigger value="overview" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <BarChart3 className="w-4 h-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <TrendingUp className="w-4 h-4" />
+              Insights
+            </TabsTrigger>
+            <TabsTrigger value="goals" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Target className="w-4 h-4" />
+              Goals
+            </TabsTrigger>
+            <TabsTrigger value="achievements" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Award className="w-4 h-4" />
+              Achievements
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview">
+            <div className="grid lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2 space-y-4">
+                <TimeFilteredInsights />
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <ProductiveHours tasks={allTasks} />
+                  <LifeScoreCard />
+                </div>
+                <WeeklyTrends tasks={allTasks} />
+              </div>
+
+              <div className="space-y-4">
+                <StreakCard streakData={streakData} />
+                <UpcomingTasks tasks={allTasks} limit={5} />
+                <DataExportCard />
+              </div>
             </div>
+          </TabsContent>
 
-            <WeeklyTrends tasks={allTasks} />
-          </div>
+          {/* Insights Tab */}
+          <TabsContent value="insights">
+            <div className="grid lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2 space-y-4">
+                <AdvancedSleepAnalytics />
+                <BehavioralTrends />
+                <CorrelationInsights />
+              </div>
 
-          {/* Right Column - Sidebar */}
-          <div className="space-y-4">
-            <LifeScoreCard />
-            <GoalSettingCard />
-            <StreakCard streakData={streakData} />
-            <CorrelationInsights />
-            <DataExportCard />
-            <UpcomingTasks tasks={allTasks} limit={5} />
-          </div>
-        </div>
+              <div className="space-y-4">
+                <LifeScoreCard />
+                <StreakCard streakData={streakData} />
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Goals Tab */}
+          <TabsContent value="goals">
+            <div className="grid lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2">
+                <GoalSettingCard />
+              </div>
+
+              <div className="space-y-4">
+                <LifeScoreCard />
+                <StreakCard streakData={streakData} />
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Achievements Tab */}
+          <TabsContent value="achievements">
+            <div className="grid lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2">
+                <AchievementsCard 
+                  achievements={achievements}
+                  unlockedCount={achievements.filter(a => a.unlockedAt).length}
+                  totalAchievements={achievements.length}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <StreakCard streakData={streakData} />
+                <LifeScoreCard />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
 
       {/* Celebration Modal */}

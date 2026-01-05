@@ -329,6 +329,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_goal_progress_goal"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "user_goals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "goal_progress_goal_id_fkey"
             columns: ["goal_id"]
             isOneToOne: false
@@ -405,6 +412,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_habit_logs_habit"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "habit_logs_habit_id_fkey"
             columns: ["habit_id"]
@@ -560,6 +574,13 @@ export type Database = {
           note_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_note_entries_note"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "note_entries_note_id_fkey"
             columns: ["note_id"]

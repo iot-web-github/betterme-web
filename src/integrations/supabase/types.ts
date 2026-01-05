@@ -41,6 +41,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_insights: {
+        Row: {
+          content: string
+          created_at: string | null
+          date: string
+          id: string
+          insight_type: string
+          metadata: Json | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          date: string
+          id?: string
+          insight_type: string
+          metadata?: Json | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          date?: string
+          id?: string
+          insight_type?: string
+          metadata?: Json | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_analytics: {
         Row: {
           break_minutes: number | null
@@ -298,6 +331,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      focus_sessions: {
+        Row: {
+          created_at: string | null
+          duration_minutes: number
+          ended_at: string | null
+          id: string
+          notes: string | null
+          session_type: string
+          started_at: string
+          task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration_minutes: number
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          session_type: string
+          started_at: string
+          task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          duration_minutes?: number
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          session_type?: string
+          started_at?: string
+          task_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "focus_sessions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       goal_progress: {
         Row: {
@@ -683,6 +760,48 @@ export type Database = {
           id?: string
           is_completed?: boolean | null
           scheduled_date?: string
+          start_time?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      schedule_templates: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          days_of_week: number[] | null
+          description: string | null
+          end_time: string
+          id: string
+          is_active: boolean | null
+          priority: string | null
+          start_time: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          days_of_week?: number[] | null
+          description?: string | null
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          priority?: string | null
+          start_time: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          days_of_week?: number[] | null
+          description?: string | null
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          priority?: string | null
           start_time?: string
           title?: string
           user_id?: string

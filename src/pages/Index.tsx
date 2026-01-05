@@ -3,63 +3,109 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { Header } from '@/components/layout/Header';
 import { DateSelector } from '@/components/layout/DateSelector';
-import { EnhancedTimeline } from '@/components/schedule/EnhancedTimeline';
-import { TaskForm } from '@/components/schedule/TaskForm';
-import { TaskDetailSheet } from '@/components/schedule/TaskDetailSheet';
-import { DailyScheduleManager } from '@/components/schedule/DailyScheduleManager';
 import { FocusMode } from '@/components/schedule/FocusMode';
 import { WelcomeCard } from '@/components/home/WelcomeCard';
-import { QuickStatsBar } from '@/components/home/QuickStatsBar';
-import { GoalsOverview } from '@/components/home/GoalsOverview';
-import { StreakCard } from '@/components/dashboard/StreakCard';
-import { MiniCalendar } from '@/components/dashboard/MiniCalendar';
-import { ToolsGrid } from '@/components/dashboard/ToolsGrid';
-import { HabitsSection } from '@/components/home/HabitsSection';
+import { QuickActions } from '@/components/home/QuickActions';
+import { CompactHabits } from '@/components/home/CompactHabits';
+import { SimplifiedSchedule } from '@/components/home/SimplifiedSchedule';
+import { AIInsightsCard } from '@/components/dashboard/AIInsightsCard';
 
-import { WeeklyView } from '@/components/views/WeeklyView';
-import { MonthlyView } from '@/components/views/MonthlyView';
-import { useSchedule } from '@/hooks/useSchedule';
-import { useStreaks } from '@/hooks/useStreaks';
-import { useDailySchedule } from '@/hooks/useDailySchedule';
-
-import { Task, ScheduleTemplate } from '@/types/schedule';
+import { useScheduleDB, Task } from '@/hooks/useScheduleDB';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Clock, Calendar, CalendarDays, LayoutGrid } from 'lucide-react';
-
-type ViewMode = 'day' | 'week' | 'month';
+import { Flame, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, X, Edit3, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useEffect, useState as useStateHook } from 'react';
 
 const Index = () => {
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const { user } = useAuth();
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('day');
-  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showFocusMode, setShowFocusMode] = useState(false);
+  
+  // Form state
+  const [formTitle, setFormTitle] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formTime, setFormTime] = useState('');
+  const [formDuration, setFormDuration] = useState('30');
+  const [formPriority, setFormPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [formCategory, setFormCategory] = useState('');
+
+  // Streak data
+  const [streakData, setStreakData] = useState({ currentStreak: 0, longestStreak: 0 });
+
+  const dateString = format(selectedDate, 'yyyy-MM-dd');
 
   const {
     tasks,
-    allTasks,
+    tasksForDate,
     addTask,
     updateTask,
     updateTaskStatus,
     deleteTask,
-  } = useSchedule(selectedDate);
+  } = useScheduleDB(selectedDate);
 
-  const { streakData } = useStreaks(allTasks);
+  // Fetch streak data
+  useEffect(() => {
+    if (!user) return;
+    
+    supabase
+      .from('user_streaks')
+      .select('current_streak, longest_streak')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setStreakData({
+            currentStreak: data.current_streak || 0,
+            longestStreak: data.longest_streak || 0
+          });
+        }
+      });
+  }, [user]);
 
-  const {
-    templates,
-    addTemplate,
-    deleteTemplate,
-    toggleTemplateActive,
-  } = useDailySchedule();
+  const resetForm = () => {
+    setFormTitle('');
+    setFormDescription('');
+    setFormTime('');
+    setFormDuration('30');
+    setFormPriority('medium');
+    setFormCategory('');
+    setEditingTask(null);
+  };
 
-  const handleAddTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => {
-    addTask(taskData);
+  const handleOpenAddTask = () => {
+    resetForm();
+    setShowTaskForm(true);
+  };
+
+  const handleSubmitTask = async () => {
+    if (!formTitle.trim()) return;
+
+    const taskData = {
+      title: formTitle,
+      description: formDescription || undefined,
+      scheduled_date: dateString,
+      scheduled_time: formTime || undefined,
+      duration_minutes: formDuration ? parseInt(formDuration) : undefined,
+      priority: formPriority,
+      category: formCategory || undefined,
+    };
+
+    if (editingTask) {
+      await updateTask(editingTask.id, taskData);
+    } else {
+      await addTask(taskData);
+    }
+
+    resetForm();
     setShowTaskForm(false);
   };
 
@@ -67,273 +113,283 @@ const Index = () => {
     setSelectedTask(task);
   };
 
-  const handleCloseDetail = () => {
-    setSelectedTask(null);
-  };
-
   const handleEditTask = () => {
     if (selectedTask) {
+      setFormTitle(selectedTask.title);
+      setFormDescription(selectedTask.description || '');
+      setFormTime(selectedTask.scheduled_time || '');
+      setFormDuration(selectedTask.duration_minutes?.toString() || '30');
+      setFormPriority(selectedTask.priority);
+      setFormCategory(selectedTask.category || '');
       setEditingTask(selectedTask);
       setSelectedTask(null);
       setShowTaskForm(true);
     }
   };
 
-  const handleUpdateTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => {
-    if (editingTask) {
-      updateTask(editingTask.id, taskData);
-      setEditingTask(null);
-      setShowTaskForm(false);
-    }
-  };
-
-  const handleDeleteTask = () => {
+  const handleDeleteTask = async () => {
     if (selectedTask) {
-      deleteTask(selectedTask.id);
+      await deleteTask(selectedTask.id);
       setSelectedTask(null);
     }
   };
 
-  const handleCloseForm = () => {
-    setShowTaskForm(false);
-    setEditingTask(null);
+  const handleToggleStatus = async (taskId: string, status: Task['status']) => {
+    await updateTaskStatus(taskId, status);
   };
 
-  const handleMarkTask = (taskId: string, status: 'completed' | 'completed-on-time' | 'missed') => {
-    updateTaskStatus(taskId, status);
-  };
-
-  const handleApplyTemplates = (templatesToApply: ScheduleTemplate[]) => {
-    const dayOfWeek = new Date(selectedDate).getDay();
-    const relevantTemplates = templatesToApply.filter(t => t.daysOfWeek.includes(dayOfWeek));
-    
-    relevantTemplates.forEach(template => {
-      const existingTask = tasks.find(t => 
-        t.templateId === template.id && t.date === selectedDate
-      );
-      
-      if (!existingTask) {
-        addTask({
-          title: template.title,
-          startTime: template.startTime,
-          endTime: template.endTime,
-          category: template.category,
-          priority: template.priority,
-          description: template.description,
-          date: selectedDate,
-          isFromTemplate: true,
-          templateId: template.id,
-        });
-      }
-    });
-  };
-
-  const handleDateSelectFromMonth = (date: string) => {
-    setSelectedDate(date);
-    setViewMode('day');
+  const navigateDate = (direction: 'prev' | 'next') => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1));
+    setSelectedDate(newDate);
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+      <main className="max-w-3xl mx-auto px-4 py-4 space-y-4">
         {/* Welcome Card */}
         <WelcomeCard />
 
+        {/* Quick Actions */}
+        <QuickActions onFocusModeClick={() => setShowFocusMode(true)} />
 
-        {/* Quick Stats */}
-        <QuickStatsBar />
-
-        {/* Top Bar with Date & View Toggle */}
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+        {/* Date Navigation */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-between"
         >
-          <DateSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigateDate('prev')}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
           
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-            <TabsList className="glass border border-border/20 h-9">
-              <TabsTrigger value="day" className="gap-1.5 h-7 px-2.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Day</span>
-              </TabsTrigger>
-              <TabsTrigger value="week" className="gap-1.5 h-7 px-2.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Calendar className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Week</span>
-              </TabsTrigger>
-              <TabsTrigger value="month" className="gap-1.5 h-7 px-2.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <CalendarDays className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Month</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <DateSelector 
+            selectedDate={dateString} 
+            onDateChange={(date) => setSelectedDate(new Date(date))} 
+          />
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigateDate('next')}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
         </motion.div>
 
-        <div className="grid lg:grid-cols-[1fr,320px] gap-4">
-          {/* Main Content */}
-          <div className="space-y-4">
-            <AnimatePresence mode="wait">
-              {viewMode === 'day' && (
-                <motion.div
-                  key="day-view"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.2 }}
-                  className="glass rounded-2xl p-4 sm:p-5"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h2 className="text-lg font-display font-bold text-foreground">
-                        {format(new Date(selectedDate), 'EEEE')}
-                      </h2>
-                      <p className="text-xs text-muted-foreground">
-                        {tasks.length} task{tasks.length !== 1 && 's'} • {format(new Date(selectedDate), 'MMM d')}
-                      </p>
-                    </div>
-                    <Button 
-                      onClick={() => setShowTaskForm(true)} 
-                      size="sm"
-                      className="gap-1.5 h-8 px-3 text-xs"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Add Task
-                    </Button>
-                  </div>
+        {/* Today's Schedule */}
+        <SimplifiedSchedule
+          tasks={tasksForDate}
+          selectedDate={dateString}
+          onAddTask={handleOpenAddTask}
+          onTaskClick={handleTaskClick}
+          onToggleStatus={handleToggleStatus}
+        />
 
-                  <div className="h-[400px] overflow-y-auto scrollbar-thin pr-1">
-                    {tasks.length === 0 ? (
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="flex flex-col items-center justify-center h-full text-center"
-                      >
-                        <motion.div 
-                          className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mb-3"
-                          animate={{ scale: [1, 1.03, 1] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        >
-                          <Clock className="w-7 h-7 text-muted-foreground" />
-                        </motion.div>
-                        <h3 className="text-sm font-display font-semibold text-foreground mb-1">
-                          No tasks scheduled
-                        </h3>
-                        <p className="text-xs text-muted-foreground mb-3">
-                          Start planning your day
-                        </p>
-                        <Button variant="outline" size="sm" onClick={() => setShowTaskForm(true)} className="gap-1.5 h-8 text-xs">
-                          <Plus className="w-3.5 h-3.5" />
-                          Add Task
-                        </Button>
-                      </motion.div>
-                    ) : (
-                      <EnhancedTimeline
-                        tasks={tasks}
-                        templates={templates}
-                        onTaskClick={handleTaskClick}
-                        onMarkTask={handleMarkTask}
-                        selectedDate={selectedDate}
-                      />
-                    )}
-                  </div>
-                </motion.div>
-              )}
+        {/* Habits Grid */}
+        <CompactHabits />
 
-              {viewMode === 'week' && (
-                <motion.div
-                  key="week-view"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <WeeklyView
-                    tasks={allTasks}
-                    selectedDate={selectedDate}
-                    onDateSelect={setSelectedDate}
-                    onTaskClick={handleTaskClick}
-                  />
-                </motion.div>
-              )}
+        {/* Streak + AI Insights Row */}
+        <div className="grid sm:grid-cols-2 gap-4">
+          {/* Streak Card - Compact */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="glass rounded-2xl p-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-warning/20 to-warning/5 flex items-center justify-center">
+                <Flame className="w-6 h-6 text-warning" />
+              </div>
+              <div>
+                <p className="text-2xl font-display font-bold text-foreground">
+                  {streakData.currentStreak}
+                </p>
+                <p className="text-xs text-muted-foreground">Day streak</p>
+              </div>
+              <div className="ml-auto text-right">
+                <p className="text-sm font-semibold text-foreground">
+                  {streakData.longestStreak}
+                </p>
+                <p className="text-[10px] text-muted-foreground">Best</p>
+              </div>
+            </div>
+          </motion.div>
 
-              {viewMode === 'month' && (
-                <motion.div
-                  key="month-view"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <MonthlyView
-                    tasks={allTasks}
-                    selectedDate={selectedDate}
-                    onDateSelect={handleDateSelectFromMonth}
-                    onMonthChange={setCurrentMonth}
-                    currentMonth={currentMonth}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Habits Section */}
-            <HabitsSection />
-
-            {/* Goals Overview */}
-            <GoalsOverview />
-
-            {/* Quick Actions */}
-            <ToolsGrid onFocusModeClick={() => setShowFocusMode(true)} />
-
-            {/* Daily Schedule Manager */}
-            {viewMode === 'day' && (
-              <DailyScheduleManager
-                templates={templates}
-                onAddTemplate={addTemplate}
-                onDeleteTemplate={deleteTemplate}
-                onToggleActive={toggleTemplateActive}
-                onApplyToday={handleApplyTemplates}
-              />
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-4">
-            <MiniCalendar
-              tasks={allTasks}
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
-            />
-
-            <StreakCard streakData={streakData} />
-          </div>
+          {/* AI Summary Teaser */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+          >
+            <AIInsightsCard />
+          </motion.div>
         </div>
       </main>
 
-      {/* Modals */}
-      <AnimatePresence>
-        {showTaskForm && (
-          <TaskForm
-            onSubmit={editingTask ? handleUpdateTask : handleAddTask}
-            onClose={handleCloseForm}
-            selectedDate={selectedDate}
-            initialData={editingTask || undefined}
-          />
-        )}
+      {/* Task Form Dialog */}
+      <Dialog open={showTaskForm} onOpenChange={(open) => {
+        if (!open) resetForm();
+        setShowTaskForm(open);
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingTask ? 'Edit Task' : 'New Task'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                placeholder="What needs to be done?"
+              />
+            </div>
+            <div>
+              <Label htmlFor="description">Description (optional)</Label>
+              <Textarea
+                id="description"
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="Add details..."
+                rows={2}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="time">Time</Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={formTime}
+                  onChange={(e) => setFormTime(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="duration">Duration (min)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  value={formDuration}
+                  onChange={(e) => setFormDuration(e.target.value)}
+                  min="5"
+                  max="480"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Priority</Label>
+                <Select value={formPriority} onValueChange={(v) => setFormPriority(v as any)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Category</Label>
+                <Select value={formCategory} onValueChange={setFormCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Optional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="work">Work</SelectItem>
+                    <SelectItem value="personal">Personal</SelectItem>
+                    <SelectItem value="health">Health</SelectItem>
+                    <SelectItem value="learning">Learning</SelectItem>
+                    <SelectItem value="social">Social</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" onClick={() => setShowTaskForm(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={handleSubmitTask} className="flex-1" disabled={!formTitle.trim()}>
+                {editingTask ? 'Update' : 'Add Task'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
+      {/* Task Detail Dialog */}
+      <Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedTask?.status === 'completed' ? (
+                <CheckCircle2 className="w-5 h-5 text-success" />
+              ) : (
+                <Clock className="w-5 h-5 text-muted-foreground" />
+              )}
+              {selectedTask?.title}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTask && (
+            <div className="space-y-4 pt-2">
+              {selectedTask.description && (
+                <p className="text-sm text-muted-foreground">{selectedTask.description}</p>
+              )}
+              <div className="flex flex-wrap gap-2 text-xs">
+                {selectedTask.scheduled_time && (
+                  <span className="px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
+                    {selectedTask.scheduled_time.slice(0, 5)}
+                  </span>
+                )}
+                {selectedTask.duration_minutes && (
+                  <span className="px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
+                    {selectedTask.duration_minutes}min
+                  </span>
+                )}
+                <span className={`px-2 py-1 rounded-full ${
+                  selectedTask.priority === 'high' ? 'bg-destructive/10 text-destructive' :
+                  selectedTask.priority === 'medium' ? 'bg-warning/10 text-warning' :
+                  'bg-muted text-muted-foreground'
+                }`}>
+                  {selectedTask.priority}
+                </span>
+                {selectedTask.category && (
+                  <span className="px-2 py-1 rounded-full bg-primary/10 text-primary">
+                    {selectedTask.category}
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={handleEditTask} className="flex-1 gap-1.5">
+                  <Edit3 className="w-4 h-4" />
+                  Edit
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleDeleteTask} className="flex-1 gap-1.5">
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Focus Mode */}
+      <AnimatePresence>
         {showFocusMode && (
           <FocusMode onClose={() => setShowFocusMode(false)} />
-        )}
-
-        {selectedTask && (
-          <TaskDetailSheet
-            task={selectedTask}
-            onClose={handleCloseDetail}
-            onUpdateStatus={(status, notes) => updateTaskStatus(selectedTask.id, status, notes)}
-            onDelete={handleDeleteTask}
-            onEdit={handleEditTask}
-          />
         )}
       </AnimatePresence>
     </div>

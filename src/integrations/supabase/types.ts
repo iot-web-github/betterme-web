@@ -131,6 +131,144 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_reflections: {
+        Row: {
+          completed_tasks: string[] | null
+          consistency_level: string | null
+          created_at: string | null
+          current_mood: string | null
+          current_worries: string | null
+          daily_intention: string | null
+          date: string
+          day_rating: number | null
+          distractions: string | null
+          evening_gratitude: string | null
+          exercised_today: boolean | null
+          felt_overwhelmed: boolean | null
+          habits_followed: string | null
+          happy_moments: string | null
+          hours_slept: number | null
+          id: string
+          improvements: string | null
+          learnings: string | null
+          main_focus: string | null
+          morning_energy_level: number | null
+          morning_feeling: string | null
+          morning_gratitude: string | null
+          overall_mood: string | null
+          phone_overuse: boolean | null
+          physical_energy: number | null
+          planned_habits: string[] | null
+          planned_health_activity: string[] | null
+          productivity_rating: number | null
+          project_next_steps: string | null
+          project_problems: string | null
+          projects_worked_on: string[] | null
+          proud_moment: string | null
+          reflection_type: string
+          social_interaction: boolean | null
+          stress_factors: string | null
+          study_hours: number | null
+          study_subject: string | null
+          success_criteria: string | null
+          top_tasks_completed: string | null
+          top_three_tasks: string[] | null
+          updated_at: string | null
+          user_id: string
+          woke_on_time: boolean | null
+        }
+        Insert: {
+          completed_tasks?: string[] | null
+          consistency_level?: string | null
+          created_at?: string | null
+          current_mood?: string | null
+          current_worries?: string | null
+          daily_intention?: string | null
+          date: string
+          day_rating?: number | null
+          distractions?: string | null
+          evening_gratitude?: string | null
+          exercised_today?: boolean | null
+          felt_overwhelmed?: boolean | null
+          habits_followed?: string | null
+          happy_moments?: string | null
+          hours_slept?: number | null
+          id?: string
+          improvements?: string | null
+          learnings?: string | null
+          main_focus?: string | null
+          morning_energy_level?: number | null
+          morning_feeling?: string | null
+          morning_gratitude?: string | null
+          overall_mood?: string | null
+          phone_overuse?: boolean | null
+          physical_energy?: number | null
+          planned_habits?: string[] | null
+          planned_health_activity?: string[] | null
+          productivity_rating?: number | null
+          project_next_steps?: string | null
+          project_problems?: string | null
+          projects_worked_on?: string[] | null
+          proud_moment?: string | null
+          reflection_type: string
+          social_interaction?: boolean | null
+          stress_factors?: string | null
+          study_hours?: number | null
+          study_subject?: string | null
+          success_criteria?: string | null
+          top_tasks_completed?: string | null
+          top_three_tasks?: string[] | null
+          updated_at?: string | null
+          user_id: string
+          woke_on_time?: boolean | null
+        }
+        Update: {
+          completed_tasks?: string[] | null
+          consistency_level?: string | null
+          created_at?: string | null
+          current_mood?: string | null
+          current_worries?: string | null
+          daily_intention?: string | null
+          date?: string
+          day_rating?: number | null
+          distractions?: string | null
+          evening_gratitude?: string | null
+          exercised_today?: boolean | null
+          felt_overwhelmed?: boolean | null
+          habits_followed?: string | null
+          happy_moments?: string | null
+          hours_slept?: number | null
+          id?: string
+          improvements?: string | null
+          learnings?: string | null
+          main_focus?: string | null
+          morning_energy_level?: number | null
+          morning_feeling?: string | null
+          morning_gratitude?: string | null
+          overall_mood?: string | null
+          phone_overuse?: boolean | null
+          physical_energy?: number | null
+          planned_habits?: string[] | null
+          planned_health_activity?: string[] | null
+          productivity_rating?: number | null
+          project_next_steps?: string | null
+          project_problems?: string | null
+          projects_worked_on?: string[] | null
+          proud_moment?: string | null
+          reflection_type?: string
+          social_interaction?: boolean | null
+          stress_factors?: string | null
+          study_hours?: number | null
+          study_subject?: string | null
+          success_criteria?: string | null
+          top_tasks_completed?: string | null
+          top_three_tasks?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+          woke_on_time?: boolean | null
+        }
+        Relationships: []
+      }
       energy_logs: {
         Row: {
           created_at: string

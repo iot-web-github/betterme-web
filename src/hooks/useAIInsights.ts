@@ -18,7 +18,12 @@ export interface InsightStats {
   habitCompletionRate: number;
   avgMood: number;
   avgEnergy: number;
+  avgStress?: number;
+  avgSleep?: number;
+  exerciseDays?: number;
   totalFocusMinutes: number;
+  currentStreak?: number;
+  checkinStreak?: number;
 }
 
 export const useAIInsights = () => {

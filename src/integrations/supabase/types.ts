@@ -74,6 +74,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_user_profile: {
+        Row: {
+          ai_questions_answered: Json | null
+          ai_questions_asked: Json | null
+          created_at: string | null
+          detailed_report: Json | null
+          discovered_patterns: Json | null
+          id: string
+          last_analysis_at: string | null
+          personality_traits: Json | null
+          suggestions: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_questions_answered?: Json | null
+          ai_questions_asked?: Json | null
+          created_at?: string | null
+          detailed_report?: Json | null
+          discovered_patterns?: Json | null
+          id?: string
+          last_analysis_at?: string | null
+          personality_traits?: Json | null
+          suggestions?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_questions_answered?: Json | null
+          ai_questions_asked?: Json | null
+          created_at?: string | null
+          detailed_report?: Json | null
+          discovered_patterns?: Json | null
+          id?: string
+          last_analysis_at?: string | null
+          personality_traits?: Json | null
+          suggestions?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_analytics: {
         Row: {
           break_minutes: number | null
@@ -1034,10 +1076,12 @@ export type Database = {
       }
       user_streaks: {
         Row: {
+          checkin_streak: number | null
           created_at: string
           current_streak: number | null
           id: string
           last_active_date: string | null
+          longest_checkin_streak: number | null
           longest_streak: number | null
           perfect_days: number | null
           total_tasks_completed: number | null
@@ -1045,10 +1089,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          checkin_streak?: number | null
           created_at?: string
           current_streak?: number | null
           id?: string
           last_active_date?: string | null
+          longest_checkin_streak?: number | null
           longest_streak?: number | null
           perfect_days?: number | null
           total_tasks_completed?: number | null
@@ -1056,10 +1102,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          checkin_streak?: number | null
           created_at?: string
           current_streak?: number | null
           id?: string
           last_active_date?: string | null
+          longest_checkin_streak?: number | null
           longest_streak?: number | null
           perfect_days?: number | null
           total_tasks_completed?: number | null

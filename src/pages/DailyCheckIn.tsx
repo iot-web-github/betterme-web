@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { useLifeTracking } from '@/hooks/useLifeTracking';
+import { usePersonalizedCheckin } from '@/hooks/usePersonalizedCheckin';
 import { MoodLevel, EnergyLevel, StressLevel, MOOD_EMOJIS } from '@/types/schedule';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,9 +27,11 @@ import {
   Droplets,
   Dumbbell,
   Sparkles,
+  Flame,
+  MessageCircle,
 } from 'lucide-react';
 
-const QUESTIONS = [
+const STANDARD_QUESTIONS = [
   { id: 'wake', title: 'Wake up time?', icon: Sun },
   { id: 'sleep', title: 'Bedtime last night?', icon: Moon },
   { id: 'phone', title: 'Screen time yesterday?', icon: Smartphone },
@@ -44,8 +47,10 @@ const DailyCheckInPage = () => {
   const navigate = useNavigate();
   const today = format(new Date(), 'yyyy-MM-dd');
   const { getCheckInForDate, saveCheckIn } = useLifeTracking();
+  const { personalizedQuestions, checkinStreak, updateStreakAfterCheckin } = usePersonalizedCheckin();
   
   const [currentStep, setCurrentStep] = useState(0);
+  const [personalizedAnswers, setPersonalizedAnswers] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     wakeUpTime: '07:00',
     sleepTime: '23:00',
@@ -58,6 +63,18 @@ const DailyCheckInPage = () => {
     exerciseDuration: 30,
     notes: '',
   });
+
+  // Build combined questions list - personalized first, then standard
+  const allQuestions = [
+    ...personalizedQuestions.map(pq => ({
+      id: pq.id,
+      title: pq.question,
+      icon: MessageCircle,
+      type: 'personalized' as const,
+      context: pq.context,
+    })),
+    ...STANDARD_QUESTIONS.map(q => ({ ...q, type: 'standard' as const })),
+  ];
 
   useEffect(() => {
     const existing = getCheckInForDate(today);
@@ -77,11 +94,12 @@ const DailyCheckInPage = () => {
     }
   }, [today, getCheckInForDate]);
 
-  const progress = ((currentStep + 1) / QUESTIONS.length) * 100;
-  const CurrentIcon = QUESTIONS[currentStep].icon;
+  const progress = ((currentStep + 1) / allQuestions.length) * 100;
+  const currentQuestion = allQuestions[currentStep];
+  const CurrentIcon = currentQuestion?.icon || Sparkles;
 
   const handleNext = () => {
-    if (currentStep < QUESTIONS.length - 1) {
+    if (currentStep < allQuestions.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
       handleSubmit();
@@ -94,21 +112,49 @@ const DailyCheckInPage = () => {
     }
   };
 
-  const handleSubmit = () => {
-    saveCheckIn({
+  const handleSubmit = async () => {
+    // Save the check-in
+    await saveCheckIn({
       date: today,
       ...formData,
     });
     
+    // Update streak
+    const newStreak = await updateStreakAfterCheckin();
+    
     toast.success('Check-in saved!', {
-      description: 'Keep tracking your progress.',
+      description: newStreak && newStreak.current > 1 
+        ? `🔥 ${newStreak.current} day streak!` 
+        : 'Keep tracking your progress.',
     });
     
     navigate('/');
   };
 
   const renderQuestion = () => {
-    switch (QUESTIONS[currentStep].id) {
+    const question = allQuestions[currentStep];
+    
+    // Handle personalized questions
+    if (question.type === 'personalized') {
+      return (
+        <div className="space-y-4">
+          {question.context && (
+            <p className="text-xs text-muted-foreground text-center px-4 py-2 bg-primary/5 rounded-lg">
+              💡 {question.context}
+            </p>
+          )}
+          <Textarea
+            placeholder="Share your thoughts..."
+            value={personalizedAnswers[question.id] || ''}
+            onChange={(e) => setPersonalizedAnswers(prev => ({ ...prev, [question.id]: e.target.value }))}
+            className="min-h-[100px] glass border-primary/20 text-sm"
+          />
+        </div>
+      );
+    }
+
+    // Standard questions
+    switch (question.id) {
       case 'wake':
         return (
           <Input
@@ -318,7 +364,7 @@ const DailyCheckInPage = () => {
       <Header />
       
       <main className="max-w-lg mx-auto px-4 py-4">
-        {/* Top Navigation */}
+        {/* Top Navigation with Streak */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -333,13 +379,19 @@ const DailyCheckInPage = () => {
             <h1 className="text-base font-display font-bold text-foreground">Daily Check-in</h1>
             <p className="text-[10px] text-muted-foreground">{format(new Date(), 'EEEE, MMM d')}</p>
           </div>
-          <div className="w-8" />
+          {checkinStreak.current > 0 && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-warning/20 text-warning">
+              <Flame className="w-3 h-3" />
+              <span className="text-xs font-bold">{checkinStreak.current}</span>
+            </div>
+          )}
+          {checkinStreak.current === 0 && <div className="w-8" />}
         </motion.div>
 
         {/* Progress */}
         <div className="mb-6">
           <div className="flex justify-between text-[10px] text-muted-foreground mb-1.5">
-            <span>{currentStep + 1} of {QUESTIONS.length}</span>
+            <span>{currentStep + 1} of {allQuestions.length}</span>
             <span>{Math.round(progress)}%</span>
           </div>
           <Progress value={progress} className="h-1.5" />
@@ -356,12 +408,25 @@ const DailyCheckInPage = () => {
             className="glass rounded-2xl p-6 mb-6"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center">
-                <CurrentIcon className="w-5 h-5 text-primary" />
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${
+                currentQuestion.type === 'personalized' 
+                  ? 'bg-gradient-to-br from-primary to-info' 
+                  : 'bg-primary/15'
+              }`}>
+                <CurrentIcon className={`w-5 h-5 ${
+                  currentQuestion.type === 'personalized' 
+                    ? 'text-primary-foreground' 
+                    : 'text-primary'
+                }`} />
               </div>
-              <h2 className="text-base font-display font-semibold text-foreground">
-                {QUESTIONS[currentStep].title}
-              </h2>
+              <div>
+                <h2 className="text-base font-display font-semibold text-foreground">
+                  {currentQuestion.title}
+                </h2>
+                {currentQuestion.type === 'personalized' && (
+                  <span className="text-[10px] text-primary">✨ AI Personalized</span>
+                )}
+              </div>
             </div>
 
             {renderQuestion()}
@@ -381,7 +446,7 @@ const DailyCheckInPage = () => {
           </Button>
           
           <div className="flex gap-1">
-            {QUESTIONS.map((_, idx) => (
+            {allQuestions.map((q, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentStep(idx)}
@@ -390,6 +455,8 @@ const DailyCheckInPage = () => {
                     ? 'bg-primary w-4'
                     : idx < currentStep
                     ? 'bg-primary/50'
+                    : q.type === 'personalized'
+                    ? 'bg-info/30'
                     : 'bg-muted'
                 }`}
               />
@@ -400,7 +467,7 @@ const DailyCheckInPage = () => {
             onClick={handleNext}
             className="gap-1.5 h-9 text-xs"
           >
-            {currentStep === QUESTIONS.length - 1 ? (
+            {currentStep === allQuestions.length - 1 ? (
               <>
                 <Check className="w-3.5 h-3.5" />
                 Done

@@ -35,9 +35,12 @@ serve(async (req) => {
     }
 
     const today = new Date().toISOString().split('T')[0];
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    // Fetch user data for analysis
+    console.log('Fetching comprehensive user data for AI analysis...');
+
+    // Fetch ALL user data comprehensively
     const [
       { data: tasks },
       { data: habits },
@@ -45,134 +48,259 @@ serve(async (req) => {
       { data: moods },
       { data: checkins },
       { data: focusSessions },
-      { data: goals }
+      { data: goals },
+      { data: energyLogs },
+      { data: streaks },
+      { data: aiProfile }
     ] = await Promise.all([
-      supabase.from('tasks').select('*').eq('user_id', user.id).gte('scheduled_date', weekAgo).order('scheduled_date', { ascending: false }),
+      supabase.from('tasks').select('*').eq('user_id', user.id).gte('scheduled_date', thirtyDaysAgo).order('scheduled_date', { ascending: false }),
       supabase.from('habits').select('*').eq('user_id', user.id),
-      supabase.from('habit_logs').select('*').eq('user_id', user.id).gte('date', weekAgo),
-      supabase.from('mood_entries').select('*').eq('user_id', user.id).gte('date', weekAgo).order('date', { ascending: false }),
-      supabase.from('daily_checkins').select('*').eq('user_id', user.id).gte('date', weekAgo).order('date', { ascending: false }),
-      supabase.from('focus_sessions').select('*').eq('user_id', user.id).gte('started_at', weekAgo),
-      supabase.from('user_goals').select('*').eq('user_id', user.id).eq('is_active', true)
+      supabase.from('habit_logs').select('*').eq('user_id', user.id).gte('date', thirtyDaysAgo),
+      supabase.from('mood_entries').select('*').eq('user_id', user.id).gte('date', thirtyDaysAgo).order('date', { ascending: false }),
+      supabase.from('daily_checkins').select('*').eq('user_id', user.id).gte('date', thirtyDaysAgo).order('date', { ascending: false }),
+      supabase.from('focus_sessions').select('*').eq('user_id', user.id).gte('started_at', thirtyDaysAgo),
+      supabase.from('user_goals').select('*').eq('user_id', user.id).eq('is_active', true),
+      supabase.from('energy_logs').select('*').eq('user_id', user.id).gte('date', weekAgo),
+      supabase.from('user_streaks').select('*').eq('user_id', user.id).maybeSingle(),
+      supabase.from('ai_user_profile').select('*').eq('user_id', user.id).maybeSingle()
     ]);
 
-    // Calculate analytics
+    console.log('Data fetched:', { 
+      tasks: tasks?.length || 0, 
+      habits: habits?.length || 0, 
+      checkins: checkins?.length || 0,
+      moods: moods?.length || 0,
+      focusSessions: focusSessions?.length || 0
+    });
+
+    // Calculate comprehensive analytics
     const completedTasks = tasks?.filter(t => t.status === 'completed') || [];
     const taskCompletionRate = tasks?.length ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
-    const completedHabitLogs = habitLogs?.filter(h => h.completed) || [];
-    const habitCompletionRate = habitLogs?.length ? Math.round((completedHabitLogs.length / habitLogs.length) * 100) : 0;
-    const avgMood = moods?.length ? Math.round(moods.reduce((a, m) => a + m.level, 0) / moods.length) : 0;
-    const avgEnergy = checkins?.length ? Math.round(checkins.reduce((a, c) => a + (c.energy || 0), 0) / checkins.length) : 0;
-    const avgSleep = checkins?.filter(c => c.wake_up_time && c.sleep_time).length || 0;
+    
+    const recentHabitLogs = habitLogs?.filter(h => h.date >= weekAgo) || [];
+    const completedHabitLogs = recentHabitLogs.filter(h => h.completed) || [];
+    const habitCompletionRate = recentHabitLogs.length ? Math.round((completedHabitLogs.length / recentHabitLogs.length) * 100) : 0;
+    
+    const recentMoods = moods?.filter(m => m.date >= weekAgo) || [];
+    const avgMood = recentMoods.length ? Math.round(recentMoods.reduce((a, m) => a + m.level, 0) / recentMoods.length * 10) / 10 : 0;
+    
+    const recentCheckins = checkins?.filter(c => c.date >= weekAgo) || [];
+    const avgEnergy = recentCheckins.length ? Math.round(recentCheckins.reduce((a, c) => a + (c.energy || 0), 0) / recentCheckins.length * 10) / 10 : 0;
+    const avgStress = recentCheckins.length ? Math.round(recentCheckins.reduce((a, c) => a + (c.stress || 0), 0) / recentCheckins.length * 10) / 10 : 0;
+    const avgSleepHours = recentCheckins.filter(c => c.wake_up_time && c.sleep_time).length;
+    const exerciseDays = recentCheckins.filter(c => c.exercise).length;
+    
     const totalFocusMinutes = focusSessions?.reduce((a, s) => a + (s.duration_minutes || 0), 0) || 0;
-
-    // Build context for AI
-    const context = `
-User's weekly summary:
-- Tasks: ${completedTasks.length}/${tasks?.length || 0} completed (${taskCompletionRate}%)
-- Habits: ${completedHabitLogs.length}/${habitLogs?.length || 0} completed (${habitCompletionRate}%)
-- Average mood: ${avgMood}/5
-- Average energy: ${avgEnergy}/5
-- Focus time: ${totalFocusMinutes} minutes
-- Active goals: ${goals?.length || 0}
-- Sleep tracked days: ${avgSleep}
-${moods?.length ? `- Recent mood trend: ${moods.slice(0, 3).map(m => m.level).join(' → ')}` : ''}
-${checkins?.length ? `- Recent energy: ${checkins.slice(0, 3).map(c => c.energy).join(' → ')}` : ''}
-`;
-
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    
+    // Calculate sleep patterns
+    let avgSleep = 0;
+    if (recentCheckins.length > 0) {
+      const sleepCalcs = recentCheckins.filter(c => c.wake_up_time && c.sleep_time).map(c => {
+        const [sleepH, sleepM] = (c.sleep_time || '23:00').split(':').map(Number);
+        const [wakeH, wakeM] = (c.wake_up_time || '07:00').split(':').map(Number);
+        let hours = (wakeH + wakeM/60) - (sleepH + sleepM/60);
+        if (hours < 0) hours += 24;
+        return hours;
+      });
+      if (sleepCalcs.length > 0) {
+        avgSleep = Math.round(sleepCalcs.reduce((a, b) => a + b, 0) / sleepCalcs.length * 10) / 10;
+      }
     }
 
-    const systemPrompt = `You are a friendly wellness and productivity coach. Analyze the user's data and provide:
-1. A brief daily summary (2-3 sentences)
-2. One specific pattern you noticed
-3. One actionable recommendation
+    // Pattern detection: Exercise vs Mood correlation
+    let exerciseMoodCorrelation = '';
+    if (recentCheckins.length >= 3) {
+      const exerciseDaysData = recentCheckins.filter(c => c.exercise);
+      const nonExerciseDaysData = recentCheckins.filter(c => !c.exercise);
+      if (exerciseDaysData.length > 0 && nonExerciseDaysData.length > 0) {
+        const avgMoodExercise = exerciseDaysData.reduce((a, c) => a + (c.mood || 3), 0) / exerciseDaysData.length;
+        const avgMoodNoExercise = nonExerciseDaysData.reduce((a, c) => a + (c.mood || 3), 0) / nonExerciseDaysData.length;
+        const diff = Math.round((avgMoodExercise - avgMoodNoExercise) / avgMoodNoExercise * 100);
+        if (diff > 10) {
+          exerciseMoodCorrelation = `Your mood is ${diff}% higher on exercise days`;
+        }
+      }
+    }
 
-Keep responses warm, encouraging, and concise. Use emoji sparingly. Focus on progress, not perfection.`;
+    // Build comprehensive context for AI
+    const context = `
+User's comprehensive data analysis (Last 30 days):
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+TASK PERFORMANCE:
+- Total tasks: ${tasks?.length || 0}
+- Completed: ${completedTasks.length} (${taskCompletionRate}% completion rate)
+- Current streak: ${streaks?.current_streak || 0} days
+- Longest streak: ${streaks?.longest_streak || 0} days
+- Perfect days: ${streaks?.perfect_days || 0}
+
+WELLNESS METRICS (Last 7 days):
+- Average mood: ${avgMood}/5
+- Average energy: ${avgEnergy}/5
+- Average stress: ${avgStress}/5
+- Average sleep: ${avgSleep} hours
+- Exercise days: ${exerciseDays}/7
+- Check-in streak: ${streaks?.checkin_streak || 0} days
+
+HABITS:
+- Total habits tracked: ${habits?.length || 0}
+- Habit completion this week: ${habitCompletionRate}%
+- Habits: ${habits?.map(h => h.name).join(', ') || 'None'}
+
+FOCUS & PRODUCTIVITY:
+- Total focus time: ${totalFocusMinutes} minutes (${Math.round(totalFocusMinutes/60)} hours)
+- Active goals: ${goals?.length || 0}
+- Goals: ${goals?.map(g => g.title).slice(0, 3).join(', ') || 'None'}
+
+PATTERNS DETECTED:
+${exerciseMoodCorrelation ? `- ${exerciseMoodCorrelation}` : '- Need more data for correlation analysis'}
+${recentMoods.length > 2 ? `- Mood trend: ${recentMoods.slice(0, 3).map(m => m.level).join(' → ')}` : ''}
+${recentCheckins.length > 2 ? `- Energy trend: ${recentCheckins.slice(0, 3).map(c => c.energy).join(' → ')}` : ''}
+
+PREVIOUS AI PROFILE DATA:
+${aiProfile?.personality_traits ? `Personality: ${JSON.stringify(aiProfile.personality_traits)}` : 'No previous analysis'}
+${aiProfile?.discovered_patterns?.length ? `Known patterns: ${JSON.stringify(aiProfile.discovered_patterns.slice(0, 3))}` : ''}
+`;
+
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+
+    const systemPrompt = `You are BetterMe's AI wellness coach. Analyze the user's comprehensive data and generate personalized insights.
+
+Your analysis should be:
+1. Based ONLY on the actual data provided - never make up statistics
+2. Warm, encouraging, and actionable
+3. Focused on patterns and correlations in their behavior
+4. Personalized to their specific habits and goals
+
+Generate insights that feel like they come from someone who truly understands the user's journey.`;
+
+    console.log('Calling Gemini API for insights...');
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: context }
-        ],
-        tools: [
+        contents: [
           {
-            type: 'function',
-            function: {
-              name: 'generate_insights',
-              description: 'Generate structured insights from user data',
-              parameters: {
-                type: 'object',
-                properties: {
-                  daily_summary: {
-                    type: 'object',
-                    properties: {
-                      title: { type: 'string', description: 'Short title (5 words max)' },
-                      content: { type: 'string', description: 'Brief summary (2-3 sentences)' }
-                    },
-                    required: ['title', 'content']
-                  },
-                  pattern: {
-                    type: 'object',
-                    properties: {
-                      title: { type: 'string', description: 'Pattern name' },
-                      content: { type: 'string', description: 'Pattern description' }
-                    },
-                    required: ['title', 'content']
-                  },
-                  recommendation: {
-                    type: 'object',
-                    properties: {
-                      title: { type: 'string', description: 'Action item' },
-                      content: { type: 'string', description: 'How to implement' }
-                    },
-                    required: ['title', 'content']
-                  }
-                },
-                required: ['daily_summary', 'pattern', 'recommendation']
-              }
-            }
+            role: 'user',
+            parts: [{
+              text: `${systemPrompt}\n\nUser Data:\n${context}\n\nGenerate a JSON response with this exact structure (no markdown, just raw JSON):
+{
+  "daily_summary": {
+    "title": "Brief 3-4 word title",
+    "content": "2-3 sentence personalized summary of their current state based on real data"
+  },
+  "pattern": {
+    "title": "Pattern name",
+    "content": "Describe a specific pattern you found in their data with actual numbers"
+  },
+  "recommendation": {
+    "title": "Action item",
+    "content": "One specific, actionable recommendation based on their data"
+  },
+  "prediction": {
+    "title": "Tomorrow's forecast",
+    "content": "Prediction for tomorrow based on their patterns"
+  },
+  "personalized_questions": [
+    {
+      "id": "q1",
+      "question": "A personalized question to understand them better, based on patterns in their data",
+      "context": "Why you're asking this"
+    },
+    {
+      "id": "q2", 
+      "question": "Another personalized question based on their goals or habits",
+      "context": "Why you're asking this"
+    }
+  ],
+  "wellness_score": {
+    "score": 0-100,
+    "breakdown": {
+      "sleep": 0-100,
+      "mood": 0-100,
+      "productivity": 0-100,
+      "exercise": 0-100,
+      "habits": 0-100
+    },
+    "trend": "up|down|stable"
+  }
+}`
+            }]
           }
         ],
-        tool_choice: { type: 'function', function: { name: 'generate_insights' } }
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2000,
+        }
       }),
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error:', response.status, errorText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: 'Rate limit exceeded, please try again later' }), {
           status: 429,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: 'AI credits exhausted' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const errorText = await response.text();
-      console.error('AI gateway error:', response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const aiResponse = await response.json();
-    const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
+    console.log('Gemini response received');
     
-    if (!toolCall) {
-      throw new Error('No tool call in response');
+    const generatedText = aiResponse.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    // Parse JSON from response (handle markdown code blocks)
+    let insights;
+    try {
+      const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        insights = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON found in response');
+      }
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', parseError, generatedText);
+      // Fallback insights based on actual data
+      insights = {
+        daily_summary: {
+          title: taskCompletionRate > 60 ? 'Productive Day Ahead' : 'Building Momentum',
+          content: `You've completed ${completedTasks.length} tasks with ${taskCompletionRate}% completion rate. ${avgMood >= 4 ? 'Your mood has been positive!' : 'Focus on small wins today.'}`
+        },
+        pattern: {
+          title: 'Consistency Pattern',
+          content: streaks?.current_streak > 0 ? `You're on a ${streaks.current_streak}-day streak! Keep it going.` : 'Start building your streak today.'
+        },
+        recommendation: {
+          title: 'Today\'s Focus',
+          content: avgEnergy < 3 ? 'Consider a short walk to boost energy.' : 'You have good energy - tackle your important tasks now.'
+        },
+        prediction: {
+          title: 'Tomorrow Outlook',
+          content: 'Based on your patterns, consistency is key. Keep checking in!'
+        },
+        personalized_questions: [],
+        wellness_score: {
+          score: Math.round((avgMood + avgEnergy) * 10 + taskCompletionRate * 0.5),
+          breakdown: {
+            sleep: Math.round(avgSleep / 8 * 100),
+            mood: Math.round(avgMood * 20),
+            productivity: taskCompletionRate,
+            exercise: Math.round(exerciseDays / 7 * 100),
+            habits: habitCompletionRate
+          },
+          trend: 'stable'
+        }
+      };
     }
 
-    const insights = JSON.parse(toolCall.function.arguments);
     console.log('Generated insights:', insights);
 
     // Store insights in database
@@ -181,27 +309,50 @@ Keep responses warm, encouraging, and concise. Use emoji sparingly. Focus on pro
         user_id: user.id,
         date: today,
         insight_type: 'daily_summary',
-        title: insights.daily_summary.title,
-        content: insights.daily_summary.content,
+        title: insights.daily_summary?.title || 'Daily Summary',
+        content: insights.daily_summary?.content || '',
         metadata: { task_completion_rate: taskCompletionRate, habit_completion_rate: habitCompletionRate }
       }, { onConflict: 'user_id,date,insight_type' }),
       supabase.from('ai_insights').upsert({
         user_id: user.id,
         date: today,
         insight_type: 'pattern',
-        title: insights.pattern.title,
-        content: insights.pattern.content,
+        title: insights.pattern?.title || 'Pattern',
+        content: insights.pattern?.content || '',
         metadata: { avg_mood: avgMood, avg_energy: avgEnergy }
       }, { onConflict: 'user_id,date,insight_type' }),
       supabase.from('ai_insights').upsert({
         user_id: user.id,
         date: today,
         insight_type: 'recommendation',
-        title: insights.recommendation.title,
-        content: insights.recommendation.content,
+        title: insights.recommendation?.title || 'Recommendation',
+        content: insights.recommendation?.content || '',
         metadata: {}
-      }, { onConflict: 'user_id,date,insight_type' })
+      }, { onConflict: 'user_id,date,insight_type' }),
+      supabase.from('ai_insights').upsert({
+        user_id: user.id,
+        date: today,
+        insight_type: 'prediction',
+        title: insights.prediction?.title || 'Prediction',
+        content: insights.prediction?.content || '',
+        metadata: { wellness_score: insights.wellness_score }
+      }, { onConflict: 'user_id,date,insight_type' }),
     ];
+
+    // Store personalized questions in AI profile
+    if (insights.personalized_questions?.length > 0) {
+      insightPromises.push(
+        supabase.from('ai_user_profile').upsert({
+          user_id: user.id,
+          ai_questions_asked: insights.personalized_questions,
+          discovered_patterns: [
+            ...(aiProfile?.discovered_patterns || []),
+            { pattern: insights.pattern?.content, date: today }
+          ].slice(-10),
+          last_analysis_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' })
+      );
+    }
 
     await Promise.all(insightPromises);
 
@@ -213,7 +364,12 @@ Keep responses warm, encouraging, and concise. Use emoji sparingly. Focus on pro
         habitCompletionRate,
         avgMood,
         avgEnergy,
-        totalFocusMinutes
+        avgStress,
+        avgSleep,
+        exerciseDays,
+        totalFocusMinutes,
+        currentStreak: streaks?.current_streak || 0,
+        checkinStreak: streaks?.checkin_streak || 0,
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

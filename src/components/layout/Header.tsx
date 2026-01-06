@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Sparkles, Zap, Home, BarChart3, ClipboardCheck, Wrench, Menu, X, User, LogOut } from 'lucide-react';
+import { Sparkles, Zap, Home, BarChart3, ClipboardCheck, Wrench, Menu, X, User, LogOut, Brain } from 'lucide-react';
 const navItems = [{
   href: '/',
   label: 'Home',
@@ -15,6 +15,10 @@ const navItems = [{
   href: '/checkin',
   label: 'Check-in',
   icon: ClipboardCheck
+}, {
+  href: '/ai-insights',
+  label: 'AI',
+  icon: Brain
 }, {
   href: '/tools',
   label: 'Tools',

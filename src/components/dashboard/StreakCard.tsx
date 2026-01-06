@@ -1,20 +1,28 @@
 import { motion } from 'framer-motion';
-import { Flame, Trophy, Target, Zap } from 'lucide-react';
-import { StreakData } from '@/hooks/useStreaks';
+import { Flame, Trophy, Target, Zap, ClipboardCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+interface ExtendedStreakData {
+  currentStreak: number;
+  longestStreak: number;
+  totalTasksCompleted: number;
+  perfectDays: number;
+  checkinStreak?: number;
+  longestCheckinStreak?: number;
+}
+
 interface StreakCardProps {
-  streakData: StreakData;
+  streakData: ExtendedStreakData;
 }
 
 export const StreakCard = ({ streakData }: StreakCardProps) => {
-  const { currentStreak, longestStreak, totalTasksCompleted, perfectDays } = streakData;
+  const { currentStreak, longestStreak, totalTasksCompleted, perfectDays, checkinStreak = 0, longestCheckinStreak = 0 } = streakData;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass rounded-xl p-5 overflow-hidden relative"
+      className="glass rounded-xl p-4 sm:p-5 overflow-hidden relative"
     >
       {/* Animated background glow for active streak */}
       {currentStreak > 0 && (
@@ -49,14 +57,15 @@ export const StreakCard = ({ streakData }: StreakCardProps) => {
               currentStreak > 0 ? "text-warning" : "text-muted-foreground"
             )} />
           </motion.div>
-          <h3 className="font-semibold text-foreground">Streak & Progress</h3>
+          <h3 className="font-semibold text-foreground text-sm sm:text-base">Streaks & Progress</h3>
         </div>
 
-        {/* Main streak display */}
-        <div className="flex items-center justify-center mb-5">
+        {/* Dual streak display */}
+        <div className="flex items-center justify-center gap-4 mb-4">
+          {/* Task Streak */}
           <motion.div
             className={cn(
-              "relative flex flex-col items-center justify-center w-24 h-24 rounded-full",
+              "relative flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-full",
               currentStreak > 0 
                 ? "bg-gradient-to-br from-warning/20 to-primary/20" 
                 : "bg-muted/50"
@@ -64,7 +73,7 @@ export const StreakCard = ({ streakData }: StreakCardProps) => {
             animate={currentStreak >= 7 ? {
               boxShadow: [
                 "0 0 0 0 rgba(251, 191, 36, 0)",
-                "0 0 0 10px rgba(251, 191, 36, 0.1)",
+                "0 0 0 8px rgba(251, 191, 36, 0.1)",
                 "0 0 0 0 rgba(251, 191, 36, 0)",
               ],
             } : {}}
@@ -73,9 +82,13 @@ export const StreakCard = ({ streakData }: StreakCardProps) => {
               repeat: Infinity,
             }}
           >
+            <Flame className={cn(
+              "w-4 h-4 mb-0.5",
+              currentStreak > 0 ? "text-warning" : "text-muted-foreground"
+            )} />
             <motion.span
               className={cn(
-                "text-3xl font-bold",
+                "text-2xl sm:text-3xl font-bold",
                 currentStreak > 0 ? "text-warning" : "text-muted-foreground"
               )}
               key={currentStreak}
@@ -85,37 +98,85 @@ export const StreakCard = ({ streakData }: StreakCardProps) => {
             >
               {currentStreak}
             </motion.span>
-            <span className="text-xs text-muted-foreground">day streak</span>
+            <span className="text-[10px] text-muted-foreground">tasks</span>
+          </motion.div>
+
+          {/* Check-in Streak */}
+          <motion.div
+            className={cn(
+              "relative flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-full",
+              checkinStreak > 0 
+                ? "bg-gradient-to-br from-info/20 to-success/20" 
+                : "bg-muted/50"
+            )}
+            animate={checkinStreak >= 7 ? {
+              boxShadow: [
+                "0 0 0 0 rgba(34, 197, 94, 0)",
+                "0 0 0 8px rgba(34, 197, 94, 0.1)",
+                "0 0 0 0 rgba(34, 197, 94, 0)",
+              ],
+            } : {}}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+            }}
+          >
+            <ClipboardCheck className={cn(
+              "w-4 h-4 mb-0.5",
+              checkinStreak > 0 ? "text-success" : "text-muted-foreground"
+            )} />
+            <motion.span
+              className={cn(
+                "text-2xl sm:text-3xl font-bold",
+                checkinStreak > 0 ? "text-success" : "text-muted-foreground"
+              )}
+              key={checkinStreak}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              {checkinStreak}
+            </motion.span>
+            <span className="text-[10px] text-muted-foreground">check-ins</span>
           </motion.div>
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
           <motion.div
-            className="flex flex-col items-center p-2 rounded-lg bg-secondary/50"
+            className="flex flex-col items-center p-1.5 sm:p-2 rounded-lg bg-secondary/50"
             whileHover={{ scale: 1.05 }}
           >
-            <Trophy className="w-4 h-4 text-primary mb-1" />
-            <span className="text-lg font-bold text-foreground">{longestStreak}</span>
-            <span className="text-[10px] text-muted-foreground">Best</span>
+            <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary mb-0.5" />
+            <span className="text-sm sm:text-lg font-bold text-foreground">{longestStreak}</span>
+            <span className="text-[8px] sm:text-[10px] text-muted-foreground">Best</span>
           </motion.div>
           
           <motion.div
-            className="flex flex-col items-center p-2 rounded-lg bg-secondary/50"
+            className="flex flex-col items-center p-1.5 sm:p-2 rounded-lg bg-secondary/50"
             whileHover={{ scale: 1.05 }}
           >
-            <Target className="w-4 h-4 text-success mb-1" />
-            <span className="text-lg font-bold text-foreground">{totalTasksCompleted}</span>
-            <span className="text-[10px] text-muted-foreground">Tasks</span>
+            <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-success mb-0.5" />
+            <span className="text-sm sm:text-lg font-bold text-foreground">{totalTasksCompleted}</span>
+            <span className="text-[8px] sm:text-[10px] text-muted-foreground">Tasks</span>
           </motion.div>
           
           <motion.div
-            className="flex flex-col items-center p-2 rounded-lg bg-secondary/50"
+            className="flex flex-col items-center p-1.5 sm:p-2 rounded-lg bg-secondary/50"
             whileHover={{ scale: 1.05 }}
           >
-            <Zap className="w-4 h-4 text-warning mb-1" />
-            <span className="text-lg font-bold text-foreground">{perfectDays}</span>
-            <span className="text-[10px] text-muted-foreground">Perfect</span>
+            <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-warning mb-0.5" />
+            <span className="text-sm sm:text-lg font-bold text-foreground">{perfectDays}</span>
+            <span className="text-[8px] sm:text-[10px] text-muted-foreground">Perfect</span>
+          </motion.div>
+
+          <motion.div
+            className="flex flex-col items-center p-1.5 sm:p-2 rounded-lg bg-secondary/50"
+            whileHover={{ scale: 1.05 }}
+          >
+            <ClipboardCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-info mb-0.5" />
+            <span className="text-sm sm:text-lg font-bold text-foreground">{longestCheckinStreak}</span>
+            <span className="text-[8px] sm:text-[10px] text-muted-foreground">C-Best</span>
           </motion.div>
         </div>
       </div>

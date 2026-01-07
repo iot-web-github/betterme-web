@@ -137,113 +137,50 @@ RECENT CHECK-INS DATA:
 ${checkins?.slice(0, 7).map(c => `${c.date}: mood=${c.mood}, energy=${c.energy}, stress=${c.stress}, exercise=${c.exercise}`).join('\n') || 'No recent check-ins'}
 `;
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY is not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log('Generating deep analysis with Gemini...');
+    console.log('Generating deep analysis with Lovable AI Gateway...');
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{
-              text: `You are BetterMe's deep analysis AI. Based on the comprehensive user data below, generate a detailed analysis report.
-
-${context}
-
-Generate a JSON response with this exact structure (raw JSON only, no markdown):
-{
-  "personality_insights": {
-    "type": "Early Bird|Night Owl|Flexible",
-    "productivity_style": "description of their work pattern",
-    "strengths": ["strength1", "strength2", "strength3"],
-    "growth_areas": ["area1", "area2"]
-  },
-  "behavioral_predictions": [
-    {
-      "type": "productivity|wellness|habit",
-      "prediction": "Specific prediction based on their patterns",
-      "confidence": 0.0-1.0,
-      "timeframe": "tomorrow|this_week|this_month"
-    }
-  ],
-  "detailed_report": {
-    "executive_summary": "2-3 sentence overview of their overall wellbeing and productivity",
-    "sleep_analysis": "Analysis of their sleep patterns and recommendations",
-    "mood_analysis": "Analysis of mood trends and triggers",
-    "productivity_analysis": "Analysis of task completion patterns",
-    "exercise_analysis": "Analysis of exercise habits",
-    "correlations": [
-      {
-        "factor1": "sleep",
-        "factor2": "productivity", 
-        "correlation": "positive|negative|neutral",
-        "insight": "Description with actual data"
-      }
-    ],
-    "key_insights": ["insight1", "insight2", "insight3"]
-  },
-  "understanding_questions": [
-    {
-      "id": "deep_q1",
-      "question": "A thoughtful question to understand their motivations",
-      "purpose": "Why this helps understand them better",
-      "category": "motivation|lifestyle|goals|wellness"
-    },
-    {
-      "id": "deep_q2",
-      "question": "Another personalized question based on patterns",
-      "purpose": "Purpose of this question",
-      "category": "motivation|lifestyle|goals|wellness"
-    },
-    {
-      "id": "deep_q3",
-      "question": "Question about their specific habits or goals",
-      "purpose": "Purpose of this question", 
-      "category": "motivation|lifestyle|goals|wellness"
-    }
-  ],
-  "suggestions": [
-    {
-      "id": "sug1",
-      "category": "sleep|exercise|productivity|habits|wellness",
-      "priority": "high|medium|low",
-      "title": "Specific suggestion title",
-      "description": "Detailed actionable description",
-      "expected_impact": "What improvement they can expect"
-    }
-  ],
-  "weekly_focus": {
-    "theme": "This week's theme",
-    "primary_goal": "Main focus for the week",
-    "daily_tips": ["Monday tip", "Tuesday tip", "Wednesday tip"]
-  }
-}`
-            }]
-          }
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: 'You are BetterMe\'s deep analysis AI. Generate detailed, personalized analysis based on user data.' },
+          { role: 'user', content: `${context}\n\nGenerate a JSON response with personality_insights, behavioral_predictions, detailed_report, suggestions, and weekly_focus. Raw JSON only.` }
         ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 4000,
-        }
+        temperature: 0.7,
+        max_tokens: 2500,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', response.status, errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
+      console.error('Lovable AI Gateway error:', response.status, errorText);
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: 'AI is busy. Please try again in a moment.' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: 'AI credits exhausted. Please try again later.' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      throw new Error(`AI Gateway error: ${response.status}`);
     }
 
     const aiResponse = await response.json();
-    const generatedText = aiResponse.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const generatedText = aiResponse.choices?.[0]?.message?.content || '';
     
     let analysis;
     try {

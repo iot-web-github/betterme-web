@@ -161,34 +161,24 @@ ${aiProfile?.personality_traits ? `Personality: ${JSON.stringify(aiProfile.perso
 ${aiProfile?.discovered_patterns?.length ? `Known patterns: ${JSON.stringify(aiProfile.discovered_patterns.slice(0, 3))}` : ''}
 `;
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY is not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const systemPrompt = `You are BetterMe's AI wellness coach. Analyze the user's comprehensive data and generate personalized insights.
+    console.log('Calling Lovable AI Gateway for insights...');
 
-Your analysis should be:
-1. Based ONLY on the actual data provided - never make up statistics
-2. Warm, encouraging, and actionable
-3. Focused on patterns and correlations in their behavior
-4. Personalized to their specific habits and goals
-
-Generate insights that feel like they come from someone who truly understands the user's journey.`;
-
-    console.log('Calling Gemini API for insights...');
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{
-              text: `${systemPrompt}\n\nUser Data:\n${context}\n\nGenerate a JSON response with this exact structure (no markdown, just raw JSON):
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: 'You are BetterMe\'s AI wellness coach. Analyze user data and generate personalized, actionable insights based ONLY on the actual data provided. Be warm, encouraging, and specific with numbers.' },
+          { role: 'user', content: `User Data:\n${context}\n\nGenerate a JSON response with this exact structure (no markdown, just raw JSON):
 {
   "daily_summary": {
     "title": "Brief 3-4 word title",
@@ -206,56 +196,39 @@ Generate insights that feel like they come from someone who truly understands th
     "title": "Tomorrow's forecast",
     "content": "Prediction for tomorrow based on their patterns"
   },
-  "personalized_questions": [
-    {
-      "id": "q1",
-      "question": "A personalized question to understand them better, based on patterns in their data",
-      "context": "Why you're asking this"
-    },
-    {
-      "id": "q2", 
-      "question": "Another personalized question based on their goals or habits",
-      "context": "Why you're asking this"
-    }
-  ],
   "wellness_score": {
     "score": 0-100,
-    "breakdown": {
-      "sleep": 0-100,
-      "mood": 0-100,
-      "productivity": 0-100,
-      "exercise": 0-100,
-      "habits": 0-100
-    },
     "trend": "up|down|stable"
   }
-}`
-            }]
-          }
+}` }
         ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2000,
-        }
+        temperature: 0.7,
+        max_tokens: 1500,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', response.status, errorText);
+      console.error('Lovable AI Gateway error:', response.status, errorText);
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded, please try again later' }), {
+        return new Response(JSON.stringify({ error: 'AI is busy. Please try again in a moment.' }), {
           status: 429,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      throw new Error(`Gemini API error: ${response.status}`);
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: 'AI credits exhausted. Please try again later.' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      throw new Error(`AI Gateway error: ${response.status}`);
     }
 
     const aiResponse = await response.json();
-    console.log('Gemini response received');
+    console.log('Lovable AI response received');
     
-    const generatedText = aiResponse.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const generatedText = aiResponse.choices?.[0]?.message?.content || '';
     
     // Parse JSON from response (handle markdown code blocks)
     let insights;

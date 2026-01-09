@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 import { useLifeTracking } from './useLifeTracking';
-import { useSchedule } from './useSchedule';
+import { useScheduleDB } from './useScheduleDB';
 import { useHabits } from './useHabits';
 import { useFocusTimer } from './useFocusTimer';
 import { format, subDays, parseISO } from 'date-fns';
-import { Task } from '@/types/schedule';
 
 export interface CorrelationInsight {
   title: string;
@@ -35,7 +34,7 @@ export interface InsightsData {
 export const useProductivityInsights = () => {
   const today = format(new Date(), 'yyyy-MM-dd');
   const { checkIns, getWeeklyStats } = useLifeTracking();
-  const { allTasks } = useSchedule(today);
+  const { tasks: allTasks } = useScheduleDB(new Date()); // Use database tasks
   const { habits, logs: habitLogs } = useHabits();
   const { sessions } = useFocusTimer();
 
@@ -47,9 +46,9 @@ export const useProductivityInsights = () => {
     // Sleep vs Productivity correlation
     if (checkIns.length >= 3) {
       const sleepProductivityData = checkIns.slice(-14).map(checkIn => {
-        const dayTasks = allTasks.filter(t => t.date === checkIn.date);
+        const dayTasks = allTasks.filter(t => t.scheduled_date === checkIn.date);
         const completedRatio = dayTasks.length > 0 
-          ? dayTasks.filter(t => t.status === 'completed' || t.status === 'completed-on-time').length / dayTasks.length 
+          ? dayTasks.filter(t => t.status === 'completed').length / dayTasks.length 
           : 0;
         
         // Calculate sleep hours
@@ -82,8 +81,8 @@ export const useProductivityInsights = () => {
     // Mood vs Task Completion
     if (checkIns.length >= 3) {
       const moodTaskData = checkIns.slice(-14).map(checkIn => {
-        const dayTasks = allTasks.filter(t => t.date === checkIn.date);
-        const completedCount = dayTasks.filter(t => t.status === 'completed' || t.status === 'completed-on-time').length;
+        const dayTasks = allTasks.filter(t => t.scheduled_date === checkIn.date);
+        const completedCount = dayTasks.filter(t => t.status === 'completed').length;
         return { mood: checkIn.mood, completed: completedCount };
       });
 
@@ -157,17 +156,23 @@ export const useProductivityInsights = () => {
       });
     }
 
-    // Calculate productivity patterns
+    // Calculate productivity patterns from database tasks
     const tasksByHour: Record<number, number> = {};
     const tasksByDay: Record<string, number> = {};
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-    allTasks.filter(t => t.status === 'completed' || t.status === 'completed-on-time').forEach(task => {
-      const hour = parseInt(task.startTime.split(':')[0], 10);
+    allTasks.filter(t => t.status === 'completed' && t.scheduled_time).forEach(task => {
+      const hour = parseInt(task.scheduled_time!.split(':')[0], 10);
       tasksByHour[hour] = (tasksByHour[hour] || 0) + 1;
       
-      const dayOfWeek = dayNames[parseISO(task.date).getDay()];
-      tasksByDay[dayOfWeek] = (tasksByDay[dayOfWeek] || 0) + 1;
+      if (task.scheduled_date) {
+        try {
+          const dayOfWeek = dayNames[parseISO(task.scheduled_date).getDay()];
+          tasksByDay[dayOfWeek] = (tasksByDay[dayOfWeek] || 0) + 1;
+        } catch {
+          // Skip invalid dates
+        }
+      }
     });
 
     const bestHour = Object.entries(tasksByHour).sort((a, b) => b[1] - a[1])[0]?.[0] || '9';
@@ -178,13 +183,23 @@ export const useProductivityInsights = () => {
     const lastWeekStart = subDays(new Date(), 14);
     
     const tasksThisWeek = allTasks.filter(t => {
-      const date = parseISO(t.date);
-      return date >= thisWeekStart;
+      if (!t.scheduled_date) return false;
+      try {
+        const date = parseISO(t.scheduled_date);
+        return date >= thisWeekStart;
+      } catch {
+        return false;
+      }
     }).length;
     
     const tasksLastWeek = allTasks.filter(t => {
-      const date = parseISO(t.date);
-      return date >= lastWeekStart && date < thisWeekStart;
+      if (!t.scheduled_date) return false;
+      try {
+        const date = parseISO(t.scheduled_date);
+        return date >= lastWeekStart && date < thisWeekStart;
+      } catch {
+        return false;
+      }
     }).length;
 
     const percentChange = tasksLastWeek > 0 

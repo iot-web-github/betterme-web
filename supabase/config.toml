@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.ai-deep-analysis]
 verify_jwt = false
+
+[functions.ai-generate-questions]
+verify_jwt = false

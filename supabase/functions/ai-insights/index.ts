@@ -87,7 +87,6 @@ serve(async (req) => {
     const recentCheckins = checkins?.filter(c => c.date >= weekAgo) || [];
     const avgEnergy = recentCheckins.length ? Math.round(recentCheckins.reduce((a, c) => a + (c.energy || 0), 0) / recentCheckins.length * 10) / 10 : 0;
     const avgStress = recentCheckins.length ? Math.round(recentCheckins.reduce((a, c) => a + (c.stress || 0), 0) / recentCheckins.length * 10) / 10 : 0;
-    const avgSleepHours = recentCheckins.filter(c => c.wake_up_time && c.sleep_time).length;
     const exerciseDays = recentCheckins.filter(c => c.exercise).length;
     
     const totalFocusMinutes = focusSessions?.reduce((a, s) => a + (s.duration_minutes || 0), 0) || 0;
@@ -106,6 +105,58 @@ serve(async (req) => {
         avgSleep = Math.round(sleepCalcs.reduce((a, b) => a + b, 0) / sleepCalcs.length * 10) / 10;
       }
     }
+
+    // ENHANCED: Task analysis for to-do list insights
+    const tasksByCategory: Record<string, { total: number; completed: number }> = {};
+    const tasksByHour: Record<number, { total: number; completed: number }> = {};
+    const tasksByDay: Record<string, { total: number; completed: number }> = {};
+    const overdueTasks = tasks?.filter(t => t.status !== 'completed' && t.scheduled_date < today) || [];
+    
+    tasks?.forEach(t => {
+      // Category breakdown
+      const cat = t.category || 'uncategorized';
+      if (!tasksByCategory[cat]) tasksByCategory[cat] = { total: 0, completed: 0 };
+      tasksByCategory[cat].total++;
+      if (t.status === 'completed') tasksByCategory[cat].completed++;
+      
+      // Hour breakdown
+      if (t.scheduled_time) {
+        const hour = parseInt(t.scheduled_time.split(':')[0], 10);
+        if (!tasksByHour[hour]) tasksByHour[hour] = { total: 0, completed: 0 };
+        tasksByHour[hour].total++;
+        if (t.status === 'completed') tasksByHour[hour].completed++;
+      }
+      
+      // Day breakdown
+      if (t.scheduled_date) {
+        const dayOfWeek = new Date(t.scheduled_date).toLocaleDateString('en-US', { weekday: 'long' });
+        if (!tasksByDay[dayOfWeek]) tasksByDay[dayOfWeek] = { total: 0, completed: 0 };
+        tasksByDay[dayOfWeek].total++;
+        if (t.status === 'completed') tasksByDay[dayOfWeek].completed++;
+      }
+    });
+
+    // Find peak productivity hour
+    let peakHour = 9;
+    let peakHourCompletion = 0;
+    Object.entries(tasksByHour).forEach(([hour, data]) => {
+      const rate = data.total > 0 ? data.completed / data.total : 0;
+      if (rate > peakHourCompletion && data.total >= 2) {
+        peakHour = parseInt(hour, 10);
+        peakHourCompletion = rate;
+      }
+    });
+
+    // Find best day
+    let bestDay = 'Monday';
+    let bestDayCompletion = 0;
+    Object.entries(tasksByDay).forEach(([day, data]) => {
+      const rate = data.total > 0 ? data.completed / data.total : 0;
+      if (rate > bestDayCompletion && data.total >= 2) {
+        bestDay = day;
+        bestDayCompletion = rate;
+      }
+    });
 
     // Pattern detection: Exercise vs Mood correlation
     let exerciseMoodCorrelation = '';
@@ -129,9 +180,18 @@ User's comprehensive data analysis (Last 30 days):
 TASK PERFORMANCE:
 - Total tasks: ${tasks?.length || 0}
 - Completed: ${completedTasks.length} (${taskCompletionRate}% completion rate)
+- Overdue tasks: ${overdueTasks.length}
 - Current streak: ${streaks?.current_streak || 0} days
 - Longest streak: ${streaks?.longest_streak || 0} days
 - Perfect days: ${streaks?.perfect_days || 0}
+
+TASK PATTERNS (To-Do Analysis):
+- Peak productivity hour: ${peakHour}:00 (${Math.round(peakHourCompletion * 100)}% completion)
+- Best day: ${bestDay} (${Math.round(bestDayCompletion * 100)}% completion)
+- Category breakdown: ${Object.entries(tasksByCategory).map(([cat, data]) => 
+    `${cat}: ${data.completed}/${data.total} (${Math.round(data.completed/data.total*100)}%)`
+  ).join(', ')}
+- Tasks by hour: ${Object.entries(tasksByHour).slice(0, 5).map(([h, d]) => `${h}:00=${d.completed}/${d.total}`).join(', ')}
 
 WELLNESS METRICS (Last 7 days):
 - Average mood: ${avgMood}/5
@@ -177,7 +237,7 @@ ${aiProfile?.discovered_patterns?.length ? `Known patterns: ${JSON.stringify(aiP
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: 'You are BetterMe\'s AI wellness coach. Analyze user data and generate personalized, actionable insights based ONLY on the actual data provided. Be warm, encouraging, and specific with numbers.' },
+          { role: 'system', content: 'You are BetterMe\'s AI wellness coach. Analyze user data and generate personalized, actionable insights based ONLY on the actual data provided. Be warm, encouraging, and specific with numbers. Pay special attention to task patterns and productivity analysis.' },
           { role: 'user', content: `User Data:\n${context}\n\nGenerate a JSON response with this exact structure (no markdown, just raw JSON):
 {
   "daily_summary": {
@@ -195,6 +255,12 @@ ${aiProfile?.discovered_patterns?.length ? `Known patterns: ${JSON.stringify(aiP
   "prediction": {
     "title": "Tomorrow's forecast",
     "content": "Prediction for tomorrow based on their patterns"
+  },
+  "task_insights": {
+    "peak_hour": ${peakHour},
+    "best_day": "${bestDay}",
+    "productivity_tip": "Specific tip based on their task patterns",
+    "category_focus": "Which category needs attention"
   },
   "wellness_score": {
     "score": 0-100,
@@ -248,27 +314,27 @@ ${aiProfile?.discovered_patterns?.length ? `Known patterns: ${JSON.stringify(aiP
           content: `You've completed ${completedTasks.length} tasks with ${taskCompletionRate}% completion rate. ${avgMood >= 4 ? 'Your mood has been positive!' : 'Focus on small wins today.'}`
         },
         pattern: {
-          title: 'Consistency Pattern',
-          content: streaks?.current_streak > 0 ? `You're on a ${streaks.current_streak}-day streak! Keep it going.` : 'Start building your streak today.'
+          title: 'Productivity Pattern',
+          content: `Your peak productivity is at ${peakHour}:00 with ${Math.round(peakHourCompletion * 100)}% completion. ${bestDay} is your best day.`
         },
         recommendation: {
           title: 'Today\'s Focus',
-          content: avgEnergy < 3 ? 'Consider a short walk to boost energy.' : 'You have good energy - tackle your important tasks now.'
+          content: avgEnergy < 3 ? 'Consider a short walk to boost energy.' : `Schedule your most important task around ${peakHour}:00 for best results.`
         },
         prediction: {
           title: 'Tomorrow Outlook',
           content: 'Based on your patterns, consistency is key. Keep checking in!'
         },
-        personalized_questions: [],
+        task_insights: {
+          peak_hour: peakHour,
+          best_day: bestDay,
+          productivity_tip: `Schedule important tasks at ${peakHour}:00 on ${bestDay}`,
+          category_focus: Object.entries(tasksByCategory).sort((a, b) => 
+            (a[1].completed/a[1].total) - (b[1].completed/b[1].total)
+          )[0]?.[0] || 'general'
+        },
         wellness_score: {
           score: Math.round((avgMood + avgEnergy) * 10 + taskCompletionRate * 0.5),
-          breakdown: {
-            sleep: Math.round(avgSleep / 8 * 100),
-            mood: Math.round(avgMood * 20),
-            productivity: taskCompletionRate,
-            exercise: Math.round(exerciseDays / 7 * 100),
-            habits: habitCompletionRate
-          },
           trend: 'stable'
         }
       };
@@ -292,7 +358,7 @@ ${aiProfile?.discovered_patterns?.length ? `Known patterns: ${JSON.stringify(aiP
         insight_type: 'pattern',
         title: insights.pattern?.title || 'Pattern',
         content: insights.pattern?.content || '',
-        metadata: { avg_mood: avgMood, avg_energy: avgEnergy }
+        metadata: { avg_mood: avgMood, avg_energy: avgEnergy, task_insights: insights.task_insights }
       }, { onConflict: 'user_id,date,insight_type' }),
       supabase.from('ai_insights').upsert({
         user_id: user.id,
@@ -300,7 +366,7 @@ ${aiProfile?.discovered_patterns?.length ? `Known patterns: ${JSON.stringify(aiP
         insight_type: 'recommendation',
         title: insights.recommendation?.title || 'Recommendation',
         content: insights.recommendation?.content || '',
-        metadata: {}
+        metadata: { peak_hour: peakHour, best_day: bestDay }
       }, { onConflict: 'user_id,date,insight_type' }),
       supabase.from('ai_insights').upsert({
         user_id: user.id,
@@ -312,20 +378,23 @@ ${aiProfile?.discovered_patterns?.length ? `Known patterns: ${JSON.stringify(aiP
       }, { onConflict: 'user_id,date,insight_type' }),
     ];
 
-    // Store personalized questions in AI profile
-    if (insights.personalized_questions?.length > 0) {
-      insightPromises.push(
-        supabase.from('ai_user_profile').upsert({
-          user_id: user.id,
-          ai_questions_asked: insights.personalized_questions,
-          discovered_patterns: [
-            ...(aiProfile?.discovered_patterns || []),
-            { pattern: insights.pattern?.content, date: today }
-          ].slice(-10),
-          last_analysis_at: new Date().toISOString(),
-        }, { onConflict: 'user_id' })
-      );
-    }
+    // Update AI profile with discovered patterns
+    const newPattern = {
+      pattern: insights.pattern?.content,
+      date: today,
+      task_insights: insights.task_insights
+    };
+
+    insightPromises.push(
+      supabase.from('ai_user_profile').upsert({
+        user_id: user.id,
+        discovered_patterns: [
+          newPattern,
+          ...(aiProfile?.discovered_patterns || [])
+        ].slice(0, 20),
+        last_analysis_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' })
+    );
 
     await Promise.all(insightPromises);
 
@@ -343,6 +412,9 @@ ${aiProfile?.discovered_patterns?.length ? `Known patterns: ${JSON.stringify(aiP
         totalFocusMinutes,
         currentStreak: streaks?.current_streak || 0,
         checkinStreak: streaks?.checkin_streak || 0,
+        peakHour,
+        bestDay,
+        overdueTasks: overdueTasks.length,
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

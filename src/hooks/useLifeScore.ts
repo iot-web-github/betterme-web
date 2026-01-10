@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { useLifeTracking } from './useLifeTracking';
 import { useHabits } from './useHabits';
-import { useSchedule } from './useSchedule';
-import { format } from 'date-fns';
+import { useScheduleDB } from './useScheduleDB';
 
 export interface LifeScoreBreakdown {
   sleep: number;
@@ -21,23 +20,22 @@ export interface LifeScoreData {
 }
 
 export const useLifeScore = () => {
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const { getWeeklyStats, getCheckInForDate, checkIns } = useLifeTracking();
+  const { getWeeklyStats, checkIns } = useLifeTracking();
   const { getTodayProgress, habits } = useHabits();
-  const { dailyStats, tasks } = useSchedule(today);
+  const { tasksForDate, calculateDailyStats } = useScheduleDB();
 
   const lifeScoreData = useMemo((): LifeScoreData => {
     const weeklyStats = getWeeklyStats();
-    const todayCheckIn = getCheckInForDate(today);
     const habitProgress = getTodayProgress();
+    const dailyStats = calculateDailyStats();
 
     // Calculate component scores (0-100 each)
     const sleepScore = Math.min(100, (weeklyStats.averageSleep / 8) * 100);
     const moodScore = (weeklyStats.averageMood / 5) * 100;
     
     // Productivity from task completion
-    const productivityScore = dailyStats.totalTasks > 0 
-      ? (dailyStats.completedTasks / dailyStats.totalTasks) * 100 
+    const productivityScore = dailyStats.total > 0 
+      ? (dailyStats.completed / dailyStats.total) * 100 
       : 50;
     
     // Habits completion rate
@@ -120,7 +118,7 @@ export const useLifeScore = () => {
       trend,
       insights: insights.slice(0, 3),
     };
-  }, [getWeeklyStats, getCheckInForDate, getTodayProgress, dailyStats, habits, checkIns, today]);
+  }, [getWeeklyStats, getTodayProgress, calculateDailyStats, habits, checkIns]);
 
   return lifeScoreData;
 };

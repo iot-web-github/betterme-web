@@ -2,21 +2,20 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, Flame, Target, Zap } from 'lucide-react';
 import { useHabits } from '@/hooks/useHabits';
 import { useStreaks } from '@/hooks/useStreaks';
-import { useSchedule } from '@/hooks/useSchedule';
+import { useScheduleDB } from '@/hooks/useScheduleDB';
 
 export const QuickStatsBar = () => {
-  const today = new Date().toISOString().split('T')[0];
   const { getTodayProgress } = useHabits();
-  const { tasks } = useSchedule(today);
+  const { tasksForDate } = useScheduleDB();
   const { streakData } = useStreaks([]);
 
   const habitsProgress = getTodayProgress();
-  const completedTasks = tasks.filter(t => t.status === 'completed' || t.status === 'completed-on-time').length;
+  const completedTasks = tasksForDate.filter(t => t.status === 'completed').length;
 
   const stats = [
     {
       label: 'Tasks Done',
-      value: `${completedTasks}/${tasks.length}`,
+      value: `${completedTasks}/${tasksForDate.length}`,
       icon: CheckCircle2,
       color: 'from-success to-info',
     },

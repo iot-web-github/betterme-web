@@ -1,8 +1,7 @@
 import { motion } from 'framer-motion';
 import { useLifeTracking } from '@/hooks/useLifeTracking';
 import { useHabits } from '@/hooks/useHabits';
-import { useSchedule } from '@/hooks/useSchedule';
-import { format } from 'date-fns';
+import { useScheduleDB } from '@/hooks/useScheduleDB';
 import {
   TrendingUp,
   Target,
@@ -14,25 +13,22 @@ import {
 } from 'lucide-react';
 
 export const WeeklyReview = () => {
-  const today = format(new Date(), 'yyyy-MM-dd');
   const { getWeeklyStats } = useLifeTracking();
-  const { habits, getTodayProgress } = useHabits();
-  const { allTasks } = useSchedule(today);
+  const { getTodayProgress } = useHabits();
+  const { tasks: allTasks } = useScheduleDB();
   
   const weeklyStats = getWeeklyStats();
-  const habitProgress = getTodayProgress();
   
   // Calculate weekly task completion
   const weekTasks = allTasks.filter(t => {
-    const taskDate = new Date(t.date);
+    if (!t.scheduled_date) return false;
+    const taskDate = new Date(t.scheduled_date);
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     return taskDate >= weekAgo;
   });
   
-  const completedTasks = weekTasks.filter(t => 
-    t.status === 'completed' || t.status === 'completed-on-time'
-  ).length;
+  const completedTasks = weekTasks.filter(t => t.status === 'completed').length;
 
   const insights = [
     {

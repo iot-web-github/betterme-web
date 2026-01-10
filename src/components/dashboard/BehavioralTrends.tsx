@@ -1,14 +1,14 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useLifeTracking } from '@/hooks/useLifeTracking';
-import { useSchedule } from '@/hooks/useSchedule';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { TrendingUp, Moon, Zap, Clock, Award, Brain } from 'lucide-react';
-import { format, subDays, parseISO, getHours } from 'date-fns';
+import { useScheduleDB } from '@/hooks/useScheduleDB';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { TrendingUp, Clock, Brain } from 'lucide-react';
+import { format, subDays } from 'date-fns';
 
 export const BehavioralTrends = () => {
   const { checkIns } = useLifeTracking();
-  const { allTasks } = useSchedule(format(new Date(), 'yyyy-MM-dd'));
+  const { tasks: allTasks } = useScheduleDB();
 
   // Sleep vs Productivity correlation data
   const correlationData = useMemo(() => {
@@ -16,7 +16,7 @@ export const BehavioralTrends = () => {
     for (let i = 29; i >= 0; i--) {
       const date = format(subDays(new Date(), i), 'yyyy-MM-dd');
       const checkIn = checkIns.find(c => c.date === date);
-      const dayTasks = allTasks.filter(t => t.date === date);
+      const dayTasks = allTasks.filter(t => t.scheduled_date === date);
       
       let sleepHours = 0;
       if (checkIn?.sleepTime && checkIn?.wakeUpTime) {
@@ -28,9 +28,7 @@ export const BehavioralTrends = () => {
         sleepHours = Math.round(((wakeMins - sleepMins) / 60) * 10) / 10;
       }
 
-      const completedTasks = dayTasks.filter(t => 
-        t.status === 'completed' || t.status === 'completed-on-time'
-      ).length;
+      const completedTasks = dayTasks.filter(t => t.status === 'completed').length;
       const productivity = dayTasks.length > 0 
         ? Math.round((completedTasks / dayTasks.length) * 100) 
         : 0;
@@ -58,10 +56,10 @@ export const BehavioralTrends = () => {
     }
 
     allTasks.forEach(task => {
-      if (task.startTime) {
-        const hour = parseInt(task.startTime.split(':')[0]);
+      if (task.scheduled_time) {
+        const hour = parseInt(task.scheduled_time.split(':')[0]);
         hourData[hour].total++;
-        if (task.status === 'completed' || task.status === 'completed-on-time') {
+        if (task.status === 'completed') {
           hourData[hour].completed++;
         }
       }

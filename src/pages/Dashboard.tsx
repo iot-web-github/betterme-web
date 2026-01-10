@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/layout/Header';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -16,7 +16,8 @@ import { BehavioralTrends } from '@/components/dashboard/BehavioralTrends';
 import { GoalSettingCard } from '@/components/dashboard/GoalSettingCard';
 import { AchievementsCard } from '@/components/dashboard/AchievementsCard';
 import { AIInsightsCard } from '@/components/dashboard/AIInsightsCard';
-import { useSchedule } from '@/hooks/useSchedule';
+import { SectionErrorBoundary } from '@/components/ErrorBoundary';
+import { useScheduleDB } from '@/hooks/useScheduleDB';
 import { useStreaks } from '@/hooks/useStreaks';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,11 +25,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart3, Target, TrendingUp, Award, Brain } from 'lucide-react';
 
 const Dashboard = () => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date();
   const [selectedDate] = useState(today);
   const { user } = useAuth();
   
-  const { allTasks, dailyStats } = useSchedule(selectedDate);
+  const { tasks, tasksForDate, calculateDailyStats } = useScheduleDB(selectedDate);
+  const dailyStats = useMemo(() => calculateDailyStats(), [calculateDailyStats]);
+  
+  // Convert DB tasks to format expected by legacy components
+  const allTasks = useMemo(() => tasks.map(t => ({
+    ...t,
+    date: t.scheduled_date || '',
+    startTime: t.scheduled_time || '09:00',
+    endTime: t.scheduled_time ? 
+      `${String(parseInt(t.scheduled_time.split(':')[0]) + Math.ceil((t.duration_minutes || 30) / 60)).padStart(2, '0')}:${t.scheduled_time.split(':')[1]}` : 
+      '10:00',
+    category: (t.category || 'personal') as any,
+    status: t.status as any,
+    createdAt: t.created_at,
+    updatedAt: t.created_at,
+  })) as any[], [tasks]);
+
   const { streakData, achievements } = useStreaks(allTasks);
   const { celebration, checkStreakMilestone, checkTaskMilestone, closeCelebration } = useCelebrations();
 
@@ -61,11 +78,11 @@ const Dashboard = () => {
       checkStreakMilestone(streakData.currentStreak);
     }
     
-    const completedCount = allTasks.filter(t => t.status === 'completed' || t.status === 'completed-on-time').length;
+    const completedCount = allTasks.filter(t => t.status === 'completed').length;
     if (completedCount > 0) {
       checkTaskMilestone(completedCount);
     }
-  }, [streakData.currentStreak, allTasks]);
+  }, [streakData.currentStreak, allTasks, checkStreakMilestone, checkTaskMilestone]);
 
   const extendedStreakData = {
     ...streakData,
@@ -115,10 +132,16 @@ const Dashboard = () => {
             <div className="grid lg:grid-cols-3 gap-3 sm:gap-4">
               <div className="lg:col-span-2 space-y-3 sm:space-y-4">
                 <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-                  <ProductiveHours tasks={allTasks} />
-                  <LifeScoreCard />
+                  <SectionErrorBoundary>
+                    <ProductiveHours tasks={allTasks} />
+                  </SectionErrorBoundary>
+                  <SectionErrorBoundary>
+                    <LifeScoreCard />
+                  </SectionErrorBoundary>
                 </div>
-                <WeeklyTrends tasks={allTasks} />
+                <SectionErrorBoundary>
+                  <WeeklyTrends tasks={allTasks} />
+                </SectionErrorBoundary>
               </div>
 
               <div className="space-y-3 sm:space-y-4">
@@ -133,12 +156,18 @@ const Dashboard = () => {
           <TabsContent value="insights">
             <div className="grid lg:grid-cols-3 gap-3 sm:gap-4">
               <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-                <AIInsightsCard />
-                <CorrelationInsights />
+                <SectionErrorBoundary>
+                  <AIInsightsCard />
+                </SectionErrorBoundary>
+                <SectionErrorBoundary>
+                  <CorrelationInsights />
+                </SectionErrorBoundary>
               </div>
 
               <div className="space-y-3 sm:space-y-4">
-                <LifeScoreCard />
+                <SectionErrorBoundary>
+                  <LifeScoreCard />
+                </SectionErrorBoundary>
                 <StreakCard streakData={extendedStreakData} />
               </div>
             </div>
@@ -148,12 +177,18 @@ const Dashboard = () => {
           <TabsContent value="analytics">
             <div className="grid lg:grid-cols-3 gap-3 sm:gap-4">
               <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-                <AdvancedSleepAnalytics />
-                <BehavioralTrends />
+                <SectionErrorBoundary>
+                  <AdvancedSleepAnalytics />
+                </SectionErrorBoundary>
+                <SectionErrorBoundary>
+                  <BehavioralTrends />
+                </SectionErrorBoundary>
               </div>
 
               <div className="space-y-3 sm:space-y-4">
-                <LifeScoreCard />
+                <SectionErrorBoundary>
+                  <LifeScoreCard />
+                </SectionErrorBoundary>
                 <StreakCard streakData={extendedStreakData} />
               </div>
             </div>
@@ -163,11 +198,15 @@ const Dashboard = () => {
           <TabsContent value="goals">
             <div className="grid lg:grid-cols-3 gap-3 sm:gap-4">
               <div className="lg:col-span-2">
-                <GoalSettingCard />
+                <SectionErrorBoundary>
+                  <GoalSettingCard />
+                </SectionErrorBoundary>
               </div>
 
               <div className="space-y-3 sm:space-y-4">
-                <LifeScoreCard />
+                <SectionErrorBoundary>
+                  <LifeScoreCard />
+                </SectionErrorBoundary>
                 <StreakCard streakData={extendedStreakData} />
               </div>
             </div>
@@ -186,7 +225,9 @@ const Dashboard = () => {
 
               <div className="space-y-3 sm:space-y-4">
                 <StreakCard streakData={extendedStreakData} />
-                <LifeScoreCard />
+                <SectionErrorBoundary>
+                  <LifeScoreCard />
+                </SectionErrorBoundary>
               </div>
             </div>
           </TabsContent>

@@ -98,13 +98,34 @@ export const useAIProfile = () => {
       if (fetchError) throw fetchError;
       
       if (data) {
+        // Safely parse suggestions - ensure it's always an array
+        let suggestions: AISuggestion[] = [];
+        if (data.suggestions) {
+          if (Array.isArray(data.suggestions)) {
+            suggestions = data.suggestions as unknown as AISuggestion[];
+          } else if (typeof data.suggestions === 'object') {
+            // If it's an object, try to get its values as an array
+            suggestions = Object.values(data.suggestions as object) as unknown as AISuggestion[];
+          }
+        }
+
+        // Safely parse ai_questions_asked - ensure it's always an array
+        let aiQuestions: AIQuestion[] = [];
+        if (data.ai_questions_asked) {
+          if (Array.isArray(data.ai_questions_asked)) {
+            aiQuestions = data.ai_questions_asked as unknown as AIQuestion[];
+          } else if (typeof data.ai_questions_asked === 'object') {
+            aiQuestions = Object.values(data.ai_questions_asked as object) as unknown as AIQuestion[];
+          }
+        }
+
         setProfile({
           personality_traits: data.personality_traits as unknown as PersonalityInsights | null,
-          discovered_patterns: (data.discovered_patterns as unknown as any[]) || [],
-          ai_questions_asked: (data.ai_questions_asked as unknown as AIQuestion[]) || [],
-          ai_questions_answered: (data.ai_questions_answered as unknown as any[]) || [],
+          discovered_patterns: Array.isArray(data.discovered_patterns) ? (data.discovered_patterns as unknown as any[]) : [],
+          ai_questions_asked: aiQuestions,
+          ai_questions_answered: Array.isArray(data.ai_questions_answered) ? (data.ai_questions_answered as unknown as any[]) : [],
           detailed_report: data.detailed_report as unknown as DetailedReport | null,
-          suggestions: (data.suggestions as unknown as AISuggestion[]) || [],
+          suggestions: suggestions,
           last_analysis_at: data.last_analysis_at,
         });
       }

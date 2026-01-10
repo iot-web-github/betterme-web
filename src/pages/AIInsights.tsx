@@ -454,7 +454,7 @@ const AIInsights = () => {
               </div>
 
               <div className="space-y-3">
-                {profile?.suggestions?.filter(s => !s.dismissed).length ? (
+                {Array.isArray(profile?.suggestions) && profile.suggestions.filter(s => !s.dismissed).length ? (
                   profile.suggestions.filter(s => !s.dismissed).map((suggestion) => (
                     <motion.div
                       key={suggestion.id}

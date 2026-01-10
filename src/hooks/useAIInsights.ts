@@ -34,7 +34,7 @@ export const useAIInsights = () => {
   const { user } = useAuth();
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [stats, setStats] = useState<InsightStats | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshTime, setLastRefreshTime] = useState<number | null>(null);
@@ -89,25 +89,28 @@ export const useAIInsights = () => {
   }, [user]);
 
   useEffect(() => {
-    fetchInsights();
-  }, [fetchInsights]);
+    if (user) {
+      fetchInsights();
+    }
+  }, [user, fetchInsights]);
 
-  // Auto-refresh check on mount
+  // Auto-refresh check - runs after initial fetch completes
   useEffect(() => {
-    if (!user || hasAutoRefreshed.current) return;
+    if (!user || isLoading || hasAutoRefreshed.current) return;
     
     const lastRefresh = localStorage.getItem(LAST_REFRESH_KEY);
     const shouldAutoRefresh = !lastRefresh || 
       (Date.now() - parseInt(lastRefresh, 10)) > REFRESH_INTERVAL;
     
-    if (shouldAutoRefresh && insights.length === 0) {
+    if (shouldAutoRefresh) {
       hasAutoRefreshed.current = true;
       // Delay to avoid blocking initial render
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         generateInsights(true);
-      }, 2000);
+      }, 1500);
+      return () => clearTimeout(timer);
     }
-  }, [user, insights.length]);
+  }, [user, isLoading]);
 
   const generateInsights = useCallback(async (isAutoRefresh = false) => {
     if (!user || isGenerating) return;

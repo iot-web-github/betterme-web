@@ -1,21 +1,19 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useLifeTracking } from '@/hooks/useLifeTracking';
-import { useSchedule } from '@/hooks/useSchedule';
+import { useScheduleDB } from '@/hooks/useScheduleDB';
 import { useAppTime, TimeFilter } from '@/hooks/useAppTime';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { 
   Calendar, 
-  TrendingUp, 
   CheckCircle, 
   Zap, 
   Heart,
   Clock,
   Target,
-  Award
 } from 'lucide-react';
-import { format, subDays, subWeeks, subMonths, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
+import { format, subDays, parseISO, isWithinInterval } from 'date-fns';
 
 const TIME_FILTERS: { key: TimeFilter; label: string }[] = [
   { key: 'today', label: 'Today' },
@@ -26,8 +24,8 @@ const TIME_FILTERS: { key: TimeFilter; label: string }[] = [
 
 export const TimeFilteredInsights = () => {
   const [activeFilter, setActiveFilter] = useState<TimeFilter>('week');
-  const { checkIns, getWeeklyStats } = useLifeTracking();
-  const { allTasks } = useSchedule(format(new Date(), 'yyyy-MM-dd'));
+  const { checkIns } = useLifeTracking();
+  const { tasks: allTasks } = useScheduleDB();
   const { getDateRange } = useAppTime();
 
   const insights = useMemo(() => {
@@ -41,8 +39,8 @@ export const TimeFilteredInsights = () => {
 
     // Filter tasks by date range
     const filteredTasks = allTasks.filter(t => {
-      if (!t.date) return false;
-      const date = parseISO(t.date);
+      if (!t.scheduled_date) return false;
+      const date = parseISO(t.scheduled_date);
       return isWithinInterval(date, { start: range.start, end: range.end });
     });
 
@@ -72,9 +70,7 @@ export const TimeFilteredInsights = () => {
     const avgSleep = sleepCount > 0 ? Math.round((totalSleepMinutes / sleepCount / 60) * 10) / 10 : 0;
 
     // Task completion
-    const completedTasks = filteredTasks.filter(t => 
-      t.status === 'completed' || t.status === 'completed-on-time'
-    ).length;
+    const completedTasks = filteredTasks.filter(t => t.status === 'completed').length;
     const taskCompletionRate = filteredTasks.length > 0
       ? Math.round((completedTasks / filteredTasks.length) * 100)
       : 0;

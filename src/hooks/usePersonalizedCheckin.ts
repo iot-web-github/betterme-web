@@ -188,7 +188,12 @@ export const usePersonalizedCheckin = () => {
     }
   }, [user]);
 
-  // Fetch questions on mount
+  // Fetch questions on mount - reset hasFetched when user changes
+  useEffect(() => {
+    // Reset when user changes
+    hasFetched.current = false;
+  }, [user?.id]);
+
   useEffect(() => {
     if (user && !hasFetched.current) {
       hasFetched.current = true;

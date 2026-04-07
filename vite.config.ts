@@ -15,17 +15,17 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "placeholder.svg"],
+      includeAssets: ["favicon.ico", "placeholder.svg", "brand-icon.svg", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
         name: "BetterMe - Personal Growth Companion",
         short_name: "BetterMe",
-        description: "Your personal growth companion for building disciplined routines and tracking wellness",
+        description: "Your personal growth companion for building disciplined routines and tracking wellness.",
         theme_color: "#6366f1",
         background_color: "#0a0a0b",
         display: "standalone",
         orientation: "portrait",
         scope: "/",
-        start_url: "/",
+        start_url: "/?source=pwa",
         icons: [
           {
             src: "/pwa-192x192.png",
@@ -45,14 +45,33 @@ export default defineConfig(({ mode }) => ({
           },
         ],
       },
+      devOptions: {
+        enabled: true,
+      },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        navigateFallback: "/",
+        navigateFallbackDenylist: [/^\/api\//, /\/_/, /\/?source=pwa/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: "CacheFirst",
             options: {
               cacheName: "google-fonts-cache",
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "gstatic-fonts-cache",
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 365,

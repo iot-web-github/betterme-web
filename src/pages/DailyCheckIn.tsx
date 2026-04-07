@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import {
   ArrowLeft,
   ArrowRight,
@@ -29,6 +30,7 @@ import {
   Sparkles,
   Flame,
   MessageCircle,
+  Camera,
 } from 'lucide-react';
 
 const STANDARD_QUESTIONS = [
@@ -93,6 +95,120 @@ const DailyCheckInPage = () => {
       });
     }
   }, [today, getCheckInForDate]);
+
+  const [isParsing, setIsParsing] = useState(false);
+  const [quickLogText, setQuickLogText] = useState('');
+  const [isScanningScreenshot, setIsScanningScreenshot] = useState(false);
+
+  const handleQuickLog = async () => {
+    if (!quickLogText.trim()) return;
+    
+    setIsParsing(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-log-parser', {
+        body: { text: quickLogText },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`
+        }
+      });
+
+      if (error) throw error;
+
+      if (data) {
+        setFormData(prev => ({
+          ...prev,
+          wakeUpTime: data.wakeUpTime || prev.wakeUpTime,
+          sleepTime: data.sleepTime || prev.sleepTime,
+          phoneUsage: data.phoneUsage || prev.phoneUsage,
+          mood: data.mood || prev.mood,
+          energy: data.energy || prev.energy,
+          stress: data.stress || prev.stress,
+          waterIntake: data.waterIntake || prev.waterIntake,
+          exercise: data.exercise !== null ? data.exercise : prev.exercise,
+          exerciseDuration: data.exerciseDuration || prev.exerciseDuration,
+          notes: data.notes || prev.notes,
+        }));
+        
+        toast.success('AI parsed your log!', {
+          description: 'We\'ve filled in the details for you. Please review and complete.',
+        });
+        
+        const notesIdx = allQuestions.findIndex(q => q.id === 'notes');
+        if (notesIdx !== -1) setCurrentStep(notesIdx);
+      }
+    } catch (err) {
+      console.error('Quick log error:', err);
+      toast.error('Could not parse your log automatically.');
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  const handleScreenshotScan = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image file is too large. Please choose a smaller image.');
+      return;
+    }
+
+    setIsScanningScreenshot(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
+      // Create form data for the API call
+      const formDataToSend = new FormData();
+      formDataToSend.append('image', file);
+
+      const { data, error } = await supabase.functions.invoke('ai-screen-time-scanner', {
+        body: formDataToSend,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data.screenTime !== undefined && data.confidence > 0.5) {
+        setFormData(prev => ({
+          ...prev,
+          phoneUsage: data.screenTime
+        }));
+
+        toast.success('Screen time detected!', {
+          description: `Found ${Math.floor(data.screenTime / 60)}h ${data.screenTime % 60}m of screen time.`,
+        });
+      } else {
+        toast.error('Could not detect screen time in the image. Please try a clearer screenshot.');
+      }
+    } catch (err) {
+      console.error('Screenshot scan error:', err);
+      toast.error('Failed to scan screenshot. Please try again.');
+    } finally {
+      setIsScanningScreenshot(false);
+      // Reset the input
+      event.target.value = '';
+    }
+  };
 
   const progress = ((currentStep + 1) / allQuestions.length) * 100;
   const currentQuestion = allQuestions[currentStep];
@@ -196,6 +312,31 @@ const DailyCheckInPage = () => {
               <span>6h</span>
               <span>12h</span>
             </div>
+            
+            {/* Scan Screenshot Button */}
+            <div className="flex justify-center pt-2">
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleScreenshotScan}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={isScanningScreenshot}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 bg-primary/5 border-primary/20 hover:bg-primary/10"
+                  disabled={isScanningScreenshot}
+                >
+                  <Camera className="w-4 h-4 text-primary" />
+                  {isScanningScreenshot ? 'Scanning...' : 'Scan Screenshot'}
+                </Button>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground text-center">
+              Upload a screenshot of your screen time to auto-fill
+            </p>
           </div>
         );
       
@@ -360,71 +501,59 @@ const DailyCheckInPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Header />
-      
-      <main className="max-w-lg mx-auto px-4 py-4">
-        {/* Top Navigation with Streak */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-6"
-        >
-          <Link to="/">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
-          <div className="text-center">
-            <h1 className="text-base font-display font-bold text-foreground">Daily Check-in</h1>
-            <p className="text-[10px] text-muted-foreground">{format(new Date(), 'EEEE, MMM d')}</p>
-          </div>
-          {checkinStreak.current > 0 && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-warning/20 text-warning">
-              <Flame className="w-3 h-3" />
-              <span className="text-xs font-bold">{checkinStreak.current}</span>
-            </div>
-          )}
-          {checkinStreak.current === 0 && <div className="w-8" />}
-        </motion.div>
 
-        {/* Progress */}
-        <div className="mb-6">
-          <div className="flex justify-between text-[10px] text-muted-foreground mb-1.5">
-            <span>{currentStep + 1} of {allQuestions.length}</span>
-            <span>{Math.round(progress)}%</span>
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <Link to="/">
+              <Button variant="ghost" size="icon" className="rounded-xl">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </Link>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-foreground">Daily Check-in</h1>
+              <p className="text-muted-foreground">{format(new Date(), 'EEEE, MMM d')}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Streak</p>
+              <p className="text-lg font-semibold text-primary">{checkinStreak.current || 0} days</p>
+            </div>
           </div>
-          <Progress value={progress} className="h-1.5" />
+
+          {/* Progress */}
+          <div className="bg-card/50 rounded-xl p-4 backdrop-blur-sm">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-muted-foreground">
+                {currentStep + 1} of {allQuestions.length}
+              </span>
+              <span className="text-sm font-medium">{Math.round(progress)}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
         </div>
 
-        {/* Question Card */}
+        {/* Current Question */}
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.15 }}
-            className="glass rounded-2xl p-6 mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="bg-card/50 rounded-2xl border border-border/50 p-6 mb-6 backdrop-blur-sm"
           >
-            <div className="flex items-center gap-3 mb-6">
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${
-                currentQuestion.type === 'personalized' 
-                  ? 'bg-gradient-to-br from-primary to-info' 
-                  : 'bg-primary/15'
-              }`}>
-                <CurrentIcon className={`w-5 h-5 ${
-                  currentQuestion.type === 'personalized' 
-                    ? 'text-primary-foreground' 
-                    : 'text-primary'
-                }`} />
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <CurrentIcon className="w-6 h-6 text-primary" />
               </div>
-              <div>
-                <h2 className="text-base font-display font-semibold text-foreground">
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold text-foreground mb-2">
                   {currentQuestion.title}
                 </h2>
-                {currentQuestion.type === 'personalized' && (
-                  <span className="text-[10px] text-primary">✨ AI Personalized</span>
+                {currentQuestion.type === 'personalized' && currentQuestion.context && (
+                  <p className="text-sm text-muted-foreground">{currentQuestion.context}</p>
                 )}
               </div>
             </div>
@@ -434,51 +563,59 @@ const DailyCheckInPage = () => {
         </AnimatePresence>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between">
+        <div className="flex justify-between items-center">
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={handlePrev}
             disabled={currentStep === 0}
-            className="gap-1.5 h-9 text-xs"
+            className="gap-2"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
-          
-          <div className="flex gap-1">
-            {allQuestions.map((q, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentStep(idx)}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  idx === currentStep
-                    ? 'bg-primary w-4'
-                    : idx < currentStep
-                    ? 'bg-primary/50'
-                    : q.type === 'personalized'
-                    ? 'bg-info/30'
-                    : 'bg-muted'
-                }`}
-              />
-            ))}
-          </div>
-          
-          <Button
-            onClick={handleNext}
-            className="gap-1.5 h-9 text-xs"
-          >
+
+          <Button onClick={handleNext} className="gap-2">
             {currentStep === allQuestions.length - 1 ? (
               <>
-                <Check className="w-3.5 h-3.5" />
-                Done
+                <Check className="w-4 h-4" />
+                Complete
               </>
             ) : (
               <>
                 Next
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-4 h-4" />
               </>
             )}
           </Button>
+        </div>
+
+        {/* Quick Log Sidebar */}
+        <div className="mt-8 bg-card/50 rounded-2xl border border-border/50 p-6 backdrop-blur-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-semibold">Quick AI Log</h3>
+          </div>
+          <div className="space-y-4">
+            <Textarea
+              placeholder="Describe your day in a few sentences..."
+              value={quickLogText}
+              onChange={(e) => setQuickLogText(e.target.value)}
+              className="min-h-[80px]"
+            />
+            <Button
+              onClick={handleQuickLog}
+              disabled={isParsing || !quickLogText.trim()}
+              className="w-full gap-2"
+              variant="secondary"
+            >
+              {isParsing ? (
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <MessageCircle className="w-4 h-4" />
+              )}
+              Parse with AI
+            </Button>
+          </div>
         </div>
       </main>
     </div>

@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from '@/components/layout/Header';
 import { useAIInsights } from '@/hooks/useAIInsights';
 import { useAIProfile } from '@/hooks/useAIProfile';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import {
@@ -83,24 +81,20 @@ const AIInsights = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
-      <main className="max-w-4xl mx-auto px-4 py-4 pb-20">
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-4 pb-20">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-6"
-        >
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-info flex items-center justify-center">
-              <Brain className="w-5 h-5 text-primary-foreground" />
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Brain className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-display font-bold text-foreground">AI Insights</h1>
+              <h1 className="text-xl font-semibold text-foreground">AI Insights</h1>
               <p className="text-xs text-muted-foreground">Your personalized analysis</p>
             </div>
           </div>
-          
+
           <Button
             onClick={handleRunAnalysis}
             disabled={isAnalyzing}
@@ -114,41 +108,37 @@ const AIInsights = () => {
             )}
             {isAnalyzing ? 'Analyzing...' : 'Deep Analysis'}
           </Button>
-        </motion.div>
+        </div>
 
         {/* Quick Stats */}
         {stats && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"
-          >
-            <div className="glass rounded-xl p-3 text-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <div className="bg-card/50 rounded-2xl border border-border/50 p-3 text-center backdrop-blur-sm">
               <Zap className="w-4 h-4 text-warning mx-auto mb-1" />
               <p className="text-lg font-bold text-foreground">{stats.avgEnergy?.toFixed(1) || 0}</p>
               <p className="text-[10px] text-muted-foreground">Avg Energy</p>
             </div>
-            <div className="glass rounded-xl p-3 text-center">
+            <div className="bg-card/50 rounded-2xl border border-border/50 p-3 text-center backdrop-blur-sm">
               <Heart className="w-4 h-4 text-primary mx-auto mb-1" />
               <p className="text-lg font-bold text-foreground">{stats.avgMood?.toFixed(1) || 0}</p>
               <p className="text-[10px] text-muted-foreground">Avg Mood</p>
             </div>
-            <div className="glass rounded-xl p-3 text-center">
+            <div className="bg-card/50 rounded-2xl border border-border/50 p-3 text-center backdrop-blur-sm">
               <Target className="w-4 h-4 text-success mx-auto mb-1" />
               <p className="text-lg font-bold text-foreground">{stats.taskCompletionRate || 0}%</p>
               <p className="text-[10px] text-muted-foreground">Tasks Done</p>
             </div>
-            <div className="glass rounded-xl p-3 text-center">
+            <div className="bg-card/50 rounded-2xl border border-border/50 p-3 text-center backdrop-blur-sm">
               <BarChart3 className="w-4 h-4 text-info mx-auto mb-1" />
               <p className="text-lg font-bold text-foreground">{stats.currentStreak || 0}</p>
               <p className="text-[10px] text-muted-foreground">Day Streak</p>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Tabs */}
         <Tabs defaultValue="summary" className="space-y-4">
-          <TabsList className="glass border border-border/20 p-1 w-full grid grid-cols-4 h-auto">
+          <TabsList className="bg-card/50 border border-border/50 p-1 w-full grid grid-cols-2 sm:grid-cols-4 gap-1 overflow-x-auto h-auto backdrop-blur-sm">
             <TabsTrigger value="summary" className="gap-1 text-xs py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Sparkles className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Summary</span>
@@ -172,12 +162,9 @@ const AIInsights = () => {
             {/* Daily Insights */}
             <div className="space-y-3">
               {insights.map((insight, index) => (
-                <motion.div
+                <div
                   key={insight.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="glass rounded-xl p-4"
+                  className="bg-card/50 rounded-2xl border border-border/50 p-4 backdrop-blur-sm"
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -197,15 +184,11 @@ const AIInsights = () => {
                       <p className="text-sm text-muted-foreground mt-1">{insight.content}</p>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
-              
+
               {insights.length === 0 && !isLoading && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="glass rounded-xl p-6 text-center"
-                >
+                <div className="bg-card/50 rounded-2xl border border-border/50 p-6 text-center backdrop-blur-sm">
                   <Brain className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                   <h3 className="text-sm font-semibold text-foreground mb-1">No insights yet</h3>
                   <p className="text-xs text-muted-foreground mb-4">Generate AI insights based on your data</p>
@@ -213,23 +196,19 @@ const AIInsights = () => {
                     {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     Generate Insights
                   </Button>
-                </motion.div>
+                </div>
               )}
             </div>
 
             {/* Detailed Report */}
             {profile?.detailed_report && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass rounded-xl p-4"
-              >
+              <div className="bg-card/50 rounded-2xl border border-border/50 p-4 backdrop-blur-sm">
                 <div className="flex items-center gap-2 mb-3">
                   <FileText className="w-4 h-4 text-primary" />
                   <h3 className="text-sm font-semibold text-foreground">Detailed Report</h3>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">{profile.detailed_report.executive_summary}</p>
-                
+
                 <div className="space-y-2">
                   {profile.detailed_report.key_insights?.map((insight, i) => (
                     <div key={i} className="flex items-start gap-2">
@@ -238,7 +217,7 @@ const AIInsights = () => {
                     </div>
                   ))}
                 </div>
-              </motion.div>
+              </div>
             )}
           </TabsContent>
 
@@ -246,11 +225,7 @@ const AIInsights = () => {
           <TabsContent value="patterns" className="space-y-4">
             {/* Personality Insights */}
             {profile?.personality_traits && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass rounded-xl p-4"
-              >
+              <div className="bg-card/50 rounded-2xl border border-border/50 p-4 backdrop-blur-sm">
                 <h3 className="text-sm font-semibold text-foreground mb-3">Your Personality Profile</h3>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="px-2 py-1 rounded-lg bg-primary/20 text-primary text-xs font-medium">
@@ -258,7 +233,7 @@ const AIInsights = () => {
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">{profile.personality_traits.productivity_style}</p>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">Strengths</p>
@@ -283,20 +258,16 @@ const AIInsights = () => {
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* Correlations */}
             {profile?.detailed_report?.correlations && profile.detailed_report.correlations.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass rounded-xl p-4"
-              >
+              <div className="bg-card/50 rounded-2xl border border-border/50 p-4 backdrop-blur-sm">
                 <h3 className="text-sm font-semibold text-foreground mb-3">Discovered Correlations</h3>
                 <div className="space-y-3">
                   {profile.detailed_report.correlations.map((corr, i) => (
-                    <div key={i} className="p-3 rounded-lg bg-secondary/50 border border-border/50">
+                    <div key={i} className="p-3 rounded-lg bg-secondary/50">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-medium text-foreground capitalize">{corr.factor1}</span>
                         <ChevronRight className="w-3 h-3 text-muted-foreground" />
@@ -313,19 +284,15 @@ const AIInsights = () => {
                     </div>
                   ))}
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* Patterns from history */}
             {profile?.discovered_patterns && profile.discovered_patterns.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass rounded-xl p-4"
-              >
+              <div className="bg-card/50 rounded-2xl border border-border/50 p-4 backdrop-blur-sm">
                 <h3 className="text-sm font-semibold text-foreground mb-3">Historical Patterns</h3>
                 <div className="space-y-2">
-                  {profile.discovered_patterns.slice(0, 5).map((pattern: any, i) => (
+                  {profile.discovered_patterns.slice(0, 5).map((pattern: Record<string, unknown>, i: number) => (
                     <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-secondary/30">
                       <TrendingUp className="w-3 h-3 text-info mt-0.5" />
                       <div>
@@ -335,11 +302,11 @@ const AIInsights = () => {
                     </div>
                   ))}
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {!profile?.personality_traits && (
-              <div className="glass rounded-xl p-6 text-center">
+              <div className="bg-card/50 rounded-2xl border border-border/50 p-6 text-center backdrop-blur-sm">
                 <TrendingUp className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                 <h3 className="text-sm font-semibold text-foreground mb-1">No patterns detected yet</h3>
                 <p className="text-xs text-muted-foreground mb-4">Run a deep analysis to discover your patterns</p>
@@ -353,11 +320,7 @@ const AIInsights = () => {
 
           {/* Questions Tab */}
           <TabsContent value="questions" className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass rounded-xl p-4"
-            >
+            <div className="bg-card/50 rounded-2xl border border-border/50 p-4 backdrop-blur-sm">
               <div className="flex items-center gap-2 mb-3">
                 <MessageCircle className="w-4 h-4 text-primary" />
                 <h3 className="text-sm font-semibold text-foreground">Help AI Understand You</h3>
@@ -369,10 +332,9 @@ const AIInsights = () => {
               <div className="space-y-3">
                 {profile?.ai_questions_asked?.length ? (
                   profile.ai_questions_asked.map((q) => (
-                    <motion.div
+                    <div
                       key={q.id}
-                      layout
-                      className="p-3 rounded-xl bg-secondary/50 border border-border/50"
+                      className="p-3 rounded-lg bg-secondary/50"
                     >
                       <div className="flex items-start gap-2 mb-2">
                         <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/20 text-primary capitalize">
@@ -382,53 +344,46 @@ const AIInsights = () => {
                       <p className="text-sm text-foreground mb-1">{q.question}</p>
                       <p className="text-[10px] text-muted-foreground mb-3">{q.purpose}</p>
 
-                      <AnimatePresence>
-                        {activeQuestion === q.id ? (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="space-y-2"
-                          >
-                            <Textarea
-                              placeholder="Your answer..."
-                              value={questionAnswer}
-                              onChange={(e) => setQuestionAnswer(e.target.value)}
-                              className="min-h-[80px] text-sm"
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                onClick={() => handleSubmitAnswer(q.id)}
-                                disabled={submittingAnswer || !questionAnswer.trim()}
-                              >
-                                {submittingAnswer ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-                                Submit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setActiveQuestion(null);
-                                  setQuestionAnswer('');
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </motion.div>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setActiveQuestion(q.id)}
-                            className="w-full"
-                          >
-                            Answer Question
-                          </Button>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
+                      {activeQuestion === q.id ? (
+                        <div className="space-y-2">
+                          <Textarea
+                            placeholder="Your answer..."
+                            value={questionAnswer}
+                            onChange={(e) => setQuestionAnswer(e.target.value)}
+                            className="min-h-[80px] text-sm"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleSubmitAnswer(q.id)}
+                              disabled={submittingAnswer || !questionAnswer.trim()}
+                            >
+                              {submittingAnswer ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                              Submit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setActiveQuestion(null);
+                                setQuestionAnswer('');
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setActiveQuestion(q.id)}
+                          className="w-full"
+                        >
+                          Answer Question
+                        </Button>
+                      )}
+                    </div>
                   ))
                 ) : (
                   <div className="text-center py-4">
@@ -438,16 +393,12 @@ const AIInsights = () => {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </div>
           </TabsContent>
 
           {/* Suggestions Tab */}
           <TabsContent value="suggestions" className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass rounded-xl p-4"
-            >
+            <div className="bg-card/50 rounded-2xl border border-border/50 p-4 backdrop-blur-sm">
               <div className="flex items-center gap-2 mb-3">
                 <Lightbulb className="w-4 h-4 text-warning" />
                 <h3 className="text-sm font-semibold text-foreground">AI Suggestions</h3>
@@ -456,11 +407,10 @@ const AIInsights = () => {
               <div className="space-y-3">
                 {Array.isArray(profile?.suggestions) && profile.suggestions.filter(s => !s.dismissed).length ? (
                   profile.suggestions.filter(s => !s.dismissed).map((suggestion) => (
-                    <motion.div
+                    <div
                       key={suggestion.id}
-                      layout
-                      className={`p-3 rounded-xl border ${
-                        suggestion.implemented ? 'bg-success/10 border-success/30' : 'bg-secondary/50 border-border/50'
+                      className={`p-3 rounded-lg ${
+                        suggestion.implemented ? 'bg-success/10 border border-success/30' : 'bg-secondary/50'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
@@ -496,7 +446,7 @@ const AIInsights = () => {
                       <h4 className="text-sm font-medium text-foreground mb-1">{suggestion.title}</h4>
                       <p className="text-xs text-muted-foreground mb-2">{suggestion.description}</p>
                       <p className="text-[10px] text-success">Expected: {suggestion.expected_impact}</p>
-                    </motion.div>
+                    </div>
                   ))
                 ) : (
                   <div className="text-center py-4">
@@ -506,7 +456,7 @@ const AIInsights = () => {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </div>
           </TabsContent>
         </Tabs>
       </main>

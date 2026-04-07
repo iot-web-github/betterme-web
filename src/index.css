@@ -101,10 +101,10 @@
     --primary: 262 83% 58%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 5% 96%;
+    --secondary: 240 20% 96%;
     --secondary-foreground: 240 10% 4%;
 
-    --muted: 240 5% 96%;
+    --muted: 240 15% 94%;
     --muted-foreground: 240 4% 46%;
 
     --accent: 262 83% 58%;
@@ -113,14 +113,58 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
+    --border: 240 10% 88%;
+    --input: 240 10% 88%;
     --ring: 262 83% 58%;
 
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(240 5% 98%));
-    --shadow-sm: 0 2px 8px hsl(240 10% 4% / 0.06);
-    --shadow-md: 0 4px 20px hsl(240 10% 4% / 0.08);
-    --shadow-lg: 0 8px 40px hsl(240 10% 4% / 0.1);
+    --radius: 1rem;
+
+    /* Enhanced light mode semantic tokens */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 10%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Light mode category colors - softer, more professional */
+    --category-work: 199 89% 48%;
+    --category-personal: 262 83% 58%;
+    --category-health: 142 76% 36%;
+    --category-learning: 38 92% 50%;
+    --category-social: 340 82% 52%;
+    --category-other: 240 10% 50%;
+
+    /* Light mode priority colors */
+    --priority-high: 0 84% 60%;
+    --priority-medium: 38 92% 50%;
+    --priority-low: 142 76% 36%;
+
+    /* Light mode gradients - subtle and elegant */
+    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(199 89% 48%));
+    --gradient-secondary: linear-gradient(135deg, hsl(262 83% 58%), hsl(340 82% 52%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(240 20% 98%));
+    --gradient-glow: radial-gradient(ellipse at center, hsl(262 83% 58% / 0.08), transparent 70%);
+    --gradient-mesh: radial-gradient(at 40% 20%, hsl(262 83% 58% / 0.04) 0px, transparent 50%),
+                     radial-gradient(at 80% 0%, hsl(199 89% 48% / 0.04) 0px, transparent 50%),
+                     radial-gradient(at 0% 50%, hsl(340 82% 52% / 0.03) 0px, transparent 50%);
+
+    /* Light mode shadows - subtle and refined */
+    --shadow-sm: 0 1px 2px hsl(240 10% 4% / 0.05), 0 1px 3px hsl(240 10% 4% / 0.1);
+    --shadow-md: 0 4px 6px hsl(240 10% 4% / 0.05), 0 2px 4px hsl(240 10% 4% / 0.06);
+    --shadow-lg: 0 10px 15px hsl(240 10% 4% / 0.08), 0 4px 6px hsl(240 10% 4% / 0.05);
+    --shadow-glow: 0 0 20px hsl(262 83% 58% / 0.15);
+    --shadow-glow-sm: 0 0 10px hsl(262 83% 58% / 0.1);
+
+    /* Light mode sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 10% 4%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 20% 96%;
+    --sidebar-accent-foreground: 240 10% 4%;
+    --sidebar-border: 240 10% 88%;
+    --sidebar-ring: 262 83% 58%;
   }
 }
 
@@ -141,6 +185,12 @@
     min-height: 100vh;
   }
 
+  /* Light mode specific body styling */
+  .light body {
+    background-image: var(--gradient-mesh);
+    background-color: hsl(var(--background));
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Space Grotesk', system-ui, sans-serif;
   }
@@ -154,6 +204,18 @@
 
   .glass-hover {
     @apply hover:bg-card/80 hover:border-border/60 transition-all duration-200;
+  }
+
+  /* Light mode specific glass styling */
+  .light .glass {
+    @apply bg-card/80 backdrop-blur-xl border border-border/60;
+    background-image: var(--gradient-card);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .light .glass-hover {
+    @apply hover:bg-card/90 hover:border-border/80;
+    box-shadow: var(--shadow-md);
   }
 
   .glass-shine {

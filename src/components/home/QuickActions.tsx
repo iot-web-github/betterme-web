@@ -54,7 +54,7 @@ export const QuickActions = ({ onFocusModeClick }: QuickActionsProps) => {
             transition={{ delay: idx * 0.04 }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex flex-col items-center gap-1.5 p-3 rounded-xl glass cursor-pointer group"
+            className="flex flex-col items-center gap-1.5 rounded-3xl glass glass-hover cursor-pointer border border-border/40 transition-all shadow-sm"
           >
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"

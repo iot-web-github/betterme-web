@@ -2,19 +2,19 @@ import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { Header } from '@/components/layout/Header';
-import { DateSelector } from '@/components/layout/DateSelector';
 import { FocusMode } from '@/components/schedule/FocusMode';
 import { WelcomeCard } from '@/components/home/WelcomeCard';
 import { QuickActions } from '@/components/home/QuickActions';
 import { CompactHabits } from '@/components/home/CompactHabits';
 import { SimplifiedSchedule } from '@/components/home/SimplifiedSchedule';
 import { AIInsightsCard } from '@/components/dashboard/AIInsightsCard';
+import { ProactiveInterventions } from '@/components/dashboard/ProactiveInterventions';
 
 import { useScheduleDB, Task } from '@/hooks/useScheduleDB';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Flame, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, X, Edit3, Trash2 } from 'lucide-react';
+import { Flame, Clock, CheckCircle2, Edit3, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -144,98 +144,77 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Header />
       
-      <main className="max-w-3xl mx-auto px-4 py-4 space-y-4">
-        {/* Welcome Card */}
-        <WelcomeCard />
+      <main className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="pointer-events-none absolute -top-12 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <WelcomeCard />
+        </div>
 
-        {/* Quick Actions */}
-        <QuickActions onFocusModeClick={() => setShowFocusMode(true)} />
+        {/* Main Content Grid */}
+        <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
+          {/* Left Column - Schedule */}
+          <div className="space-y-6">
+            <SimplifiedSchedule
+              tasks={tasksForDate}
+              selectedDate={dateString}
+              onAddTask={handleOpenAddTask}
+              onTaskClick={handleTaskClick}
+              onToggleStatus={handleToggleStatus}
+            />
+          </div>
 
-        {/* Date Navigation */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex items-center justify-between"
-        >
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigateDate('prev')}
-            className="h-8 w-8 p-0"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          
-          <DateSelector 
-            selectedDate={dateString} 
-            onDateChange={(date) => setSelectedDate(new Date(date))} 
-          />
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigateDate('next')}
-            className="h-8 w-8 p-0"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </motion.div>
-
-        {/* Today's Schedule */}
-        <SimplifiedSchedule
-          tasks={tasksForDate}
-          selectedDate={dateString}
-          onAddTask={handleOpenAddTask}
-          onTaskClick={handleTaskClick}
-          onToggleStatus={handleToggleStatus}
-        />
-
-        {/* Habits Grid */}
-        <CompactHabits />
-
-        {/* Streak + AI Insights Row */}
-        <div className="grid sm:grid-cols-2 gap-4">
-          {/* Streak Card - Compact */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass rounded-2xl p-4"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-warning/20 to-warning/5 flex items-center justify-center">
-                <Flame className="w-6 h-6 text-warning" />
+          {/* Right Column - Quick Actions & Stats */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <div className="bg-card/50 rounded-2xl border border-border/50 p-6 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-foreground">Quick Actions</h2>
+                <Button variant="secondary" size="sm" onClick={handleOpenAddTask} className="rounded-full">
+                  Add Task
+                </Button>
               </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-foreground">
-                  {streakData.currentStreak}
-                </p>
-                <p className="text-xs text-muted-foreground">Day streak</p>
-              </div>
-              <div className="ml-auto text-right">
-                <p className="text-sm font-semibold text-foreground">
-                  {streakData.longestStreak}
-                </p>
-                <p className="text-[10px] text-muted-foreground">Best</p>
+              <QuickActions onFocusModeClick={() => setShowFocusMode(true)} />
+            </div>
+
+            {/* Today's Stats */}
+            <div className="bg-card/50 rounded-2xl border border-border/50 p-6 backdrop-blur-sm">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Today</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-foreground">{tasksForDate.length}</p>
+                  <p className="text-sm text-muted-foreground">Tasks</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-emerald-400">
+                    {tasksForDate.filter((task) => task.status === 'completed').length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Done</p>
+                </div>
               </div>
             </div>
-          </motion.div>
 
-          {/* AI Summary Teaser */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-          >
+            {/* Streak */}
+            <div className="bg-card/50 rounded-2xl border border-border/50 p-6 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-emerald-400/10 flex items-center justify-center text-emerald-300">
+                  <Flame className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-foreground">{streakData.currentStreak} day streak</p>
+                  <p className="text-sm text-muted-foreground">Best: {streakData.longestStreak} days</p>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Insights */}
             <AIInsightsCard />
-          </motion.div>
+          </div>
         </div>
       </main>
-
-      {/* Task Form Dialog */}
       <Dialog open={showTaskForm} onOpenChange={(open) => {
         if (!open) resetForm();
         setShowTaskForm(open);
@@ -289,7 +268,7 @@ const Index = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Priority</Label>
-                <Select value={formPriority} onValueChange={(v) => setFormPriority(v as any)}>
+                <Select value={formPriority} onValueChange={(v: string) => setFormPriority(v)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

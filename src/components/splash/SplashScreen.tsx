@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
-import { Sparkles } from 'lucide-react';
+import { BrandIcon } from '@/components/BrandIcon';
 
 interface Quote {
   quote: string;
@@ -90,9 +90,9 @@ export const SplashScreen = ({ onComplete, minDisplayTime = 2500 }: SplashScreen
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", duration: 0.8, bounce: 0.4 }}
-              className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary to-info flex items-center justify-center shadow-glow"
+              className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-white/10 flex items-center justify-center shadow-glow"
             >
-              <Sparkles className="w-10 h-10 text-primary-foreground" />
+              <BrandIcon className="w-12 h-12" />
             </motion.div>
 
             {/* App Name */}

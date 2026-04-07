@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -10,50 +9,41 @@ export const WelcomeCard = () => {
   const currentHour = new Date().getHours();
 
   const getGreeting = () => {
-    if (currentHour >= 5 && currentHour < 12) return { text: 'Good Morning', icon: Sun, color: 'text-warning' };
-    if (currentHour >= 12 && currentHour < 17) return { text: 'Good Afternoon', icon: Coffee, color: 'text-info' };
-    if (currentHour >= 17 && currentHour < 21) return { text: 'Good Evening', icon: Sunset, color: 'text-primary' };
-    return { text: 'Good Night', icon: Moon, color: 'text-info' };
+    if (currentHour >= 5 && currentHour < 12) return { text: 'Good Morning', icon: Sun };
+    if (currentHour >= 12 && currentHour < 17) return { text: 'Good Afternoon', icon: Coffee };
+    if (currentHour >= 17 && currentHour < 21) return { text: 'Good Evening', icon: Sunset };
+    return { text: 'Good Night', icon: Moon };
   };
 
   const greeting = getGreeting();
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="glass rounded-2xl p-5 relative overflow-hidden"
-    >
-      {/* Background glow */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-info/5 pointer-events-none" />
-      
-      <div className="relative flex items-center justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <greeting.icon className={`w-5 h-5 ${greeting.color}`} />
-            <span className="text-sm text-muted-foreground">{greeting.text}</span>
+    <div className="relative overflow-hidden rounded-[2rem] border border-border/50 bg-gradient-to-br from-primary/10 via-card/80 to-emerald/10 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+      <div className="absolute -right-24 -top-16 h-44 w-44 rounded-full bg-primary/10 blur-3xl" />
+      <div className="absolute -left-16 -bottom-12 h-32 w-32 rounded-full bg-emerald/10 blur-3xl" />
+      <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
+            <greeting.icon className="w-5 h-5 text-primary" />
+            <span>{greeting.text}</span>
           </div>
-          <h1 className="text-2xl font-display font-bold text-foreground mb-1">
-            {displayName}! <motion.span
-              animate={{ rotate: [0, 14, -8, 14, -4, 10, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3 }}
-              className="inline-block"
-            >👋</motion.span>
+          <h1 className="text-4xl font-bold text-foreground sm:text-5xl mb-2">
+            {displayName}! 👋
           </h1>
           <p className="text-sm text-muted-foreground">
             {format(new Date(), "EEEE, MMMM d")}
           </p>
         </div>
-        
-        <motion.div
-          animate={{ scale: [1, 1.05, 1], rotate: [0, 5, -5, 0] }}
-          transition={{ duration: 4, repeat: Infinity }}
-          className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-info flex items-center justify-center shadow-lg"
-        >
-          <Sparkles className="w-7 h-7 text-white" />
-        </motion.div>
+
+        <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/80 shadow-sm border border-white/60">
+          <Sparkles className="w-7 h-7 text-primary" />
+        </div>
       </div>
-    </motion.div>
+
+      <p className="relative mt-5 max-w-2xl text-sm leading-6 text-muted-foreground/90">
+        Ready to turn today into momentum? Capture one win, keep the momentum, and make progress feel effortless.
+      </p>
+    </div>
   );
 };

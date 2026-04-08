@@ -13,7 +13,7 @@ import {
   Heart,
 } from 'lucide-react';
 
-export const WeeklyReview = () => {
+export const WeeklyReview = React.memo(() => {
   const { getWeeklyStats } = useLifeTracking();
   const { getTodayProgress } = useHabits();
   const { tasks: allTasks } = useScheduleDB();

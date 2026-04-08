@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 import { useLifeTracking } from '@/hooks/useLifeTracking';
 import { useHabits } from '@/hooks/useHabits';
@@ -12,7 +13,7 @@ import {
   Heart,
 } from 'lucide-react';
 
-export const WeeklyReview = () => {
+export const WeeklyReview = React.memo(() => {
   const { getWeeklyStats } = useLifeTracking();
   const { getTodayProgress } = useHabits();
   const { tasks: allTasks } = useScheduleDB();
@@ -131,4 +132,6 @@ export const WeeklyReview = () => {
       </div>
     </motion.div>
   );
-};
+});
+
+WeeklyReview.displayName = 'WeeklyReview';

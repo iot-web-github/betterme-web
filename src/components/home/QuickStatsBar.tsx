@@ -64,4 +64,6 @@ export const QuickStatsBar = React.memo(() => {
       ))}
     </motion.div>
   );
-};
+});
+
+QuickStatsBar.displayName = 'QuickStatsBar';

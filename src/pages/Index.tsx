@@ -268,7 +268,7 @@ const Index = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Priority</Label>
-                <Select value={formPriority} <Select value={formPriority} onValueChange={(v: string) => setFormPriority(v as 'low' | 'medium' | 'high')}>>
+                <Select value={formPriority} onValueChange={(v: string) => setFormPriority(v as 'low' | 'medium' | 'high')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

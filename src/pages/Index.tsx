@@ -8,7 +8,7 @@ import { QuickActions } from '@/components/home/QuickActions';
 import { CompactHabits } from '@/components/home/CompactHabits';
 import { SimplifiedSchedule } from '@/components/home/SimplifiedSchedule';
 import { AIInsightsCard } from '@/components/dashboard/AIInsightsCard';
-import { ProactiveInterventions } from '@/components/dashboard/ProactiveInterventions';
+
 
 import { useScheduleDB, Task } from '@/hooks/useScheduleDB';
 import { useAuth } from '@/hooks/useAuth';
@@ -268,7 +268,7 @@ const Index = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Priority</Label>
-                <Select value={formPriority} onValueChange={(v: string) => setFormPriority(v)}>
+                <Select value={formPriority} <Select value={formPriority} onValueChange={(v: string) => setFormPriority(v as 'low' | 'medium' | 'high')}>>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

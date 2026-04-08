@@ -1,10 +1,11 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Flame, Target, Zap } from 'lucide-react';
 import { useHabits } from '@/hooks/useHabits';
 import { useStreaks } from '@/hooks/useStreaks';
 import { useScheduleDB } from '@/hooks/useScheduleDB';
 
-export const QuickStatsBar = () => {
+export const QuickStatsBar = React.memo(() => {
   const { getTodayProgress } = useHabits();
   const { tasksForDate } = useScheduleDB();
   const { streakData } = useStreaks([]);

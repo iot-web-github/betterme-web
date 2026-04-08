@@ -60,7 +60,7 @@ export const fetchAllUserData = async (userId: string): Promise<ExportableData> 
     supabase.from('energy_logs').select('*').eq('user_id', userId),
     supabase.from('health_logs').select('*').eq('user_id', userId),
     supabase.from('notes').select('*').eq('user_id', userId),
-    supabase.from('note_entries').select('*'),
+    supabase.from('note_entries').select('*').in('note_id', (await supabase.from('notes').select('id').eq('user_id', userId)).data?.map(n => n.id) || []),
     supabase.from('user_streaks').select('*').eq('user_id', userId).maybeSingle(),
     supabase.from('user_achievements').select('*').eq('user_id', userId),
   ]);

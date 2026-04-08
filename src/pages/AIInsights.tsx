@@ -296,8 +296,8 @@ const AIInsights = () => {
                     <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-secondary/30">
                       <TrendingUp className="w-3 h-3 text-info mt-0.5" />
                       <div>
-                        <p className="text-xs text-foreground">{pattern.pattern}</p>
-                        <p className="text-[10px] text-muted-foreground">{pattern.date}</p>
+                        <p className="text-xs text-foreground">{String(pattern.pattern ?? '')}</p>
+                        <p className="text-[10px] text-muted-foreground">{String(pattern.date ?? '')}</p>
                       </div>
                     </div>
                   ))}

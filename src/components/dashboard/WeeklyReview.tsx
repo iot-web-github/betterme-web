@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 import { useLifeTracking } from '@/hooks/useLifeTracking';
 import { useHabits } from '@/hooks/useHabits';

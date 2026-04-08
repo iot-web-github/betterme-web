@@ -1,17 +1,30 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Flame, Target, Zap } from 'lucide-react';
 import { useHabits } from '@/hooks/useHabits';
 import { useStreaks } from '@/hooks/useStreaks';
 import { useScheduleDB } from '@/hooks/useScheduleDB';
+import { useEnergyTracker } from '@/hooks/useEnergyTracker';
+import { format } from 'date-fns';
 
 export const QuickStatsBar = React.memo(() => {
   const { getTodayProgress } = useHabits();
   const { tasksForDate } = useScheduleDB();
   const { streakData } = useStreaks([]);
+  const { getAverageForDate } = useEnergyTracker();
 
   const habitsProgress = getTodayProgress();
   const completedTasks = tasksForDate.filter(t => t.status === 'completed').length;
+
+  const energyValue = useMemo(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const avg = getAverageForDate(today);
+    if (avg === 0) return '—';
+    if (avg >= 4) return 'High';
+    if (avg >= 3) return 'Mid';
+    if (avg >= 2) return 'Low';
+    return 'Low';
+  }, [getAverageForDate]);
 
   const stats = [
     {
@@ -34,7 +47,7 @@ export const QuickStatsBar = React.memo(() => {
     },
     {
       label: 'Energy',
-      value: 'High',
+      value: energyValue,
       icon: Zap,
       color: 'from-warning to-success',
     },

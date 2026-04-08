@@ -132,4 +132,6 @@ export const WeeklyReview = React.memo(() => {
       </div>
     </motion.div>
   );
-};
+});
+
+WeeklyReview.displayName = 'WeeklyReview';

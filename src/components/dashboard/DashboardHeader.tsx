@@ -58,7 +58,7 @@ export const DashboardHeader = ({ onExport, stats }: DashboardHeaderProps) => {
           <Link to="/">
             <Button variant="default" size="sm" className="gap-1.5 h-9">
               <LayoutGrid className="w-4 h-4" />
-              Schedule
+              Home
             </Button>
           </Link>
         </div>

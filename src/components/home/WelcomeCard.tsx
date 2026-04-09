@@ -19,9 +19,9 @@ export const WelcomeCard = () => {
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem] border border-border/50 bg-gradient-to-br from-primary/10 via-card/80 to-emerald/10 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+    <div className="relative overflow-hidden rounded-[2rem] border border-border/50 bg-gradient-to-br from-primary/10 via-card/80 to-success/10 p-6 shadow-lg">
       <div className="absolute -right-24 -top-16 h-44 w-44 rounded-full bg-primary/10 blur-3xl" />
-      <div className="absolute -left-16 -bottom-12 h-32 w-32 rounded-full bg-emerald/10 blur-3xl" />
+      <div className="absolute -left-16 -bottom-12 h-32 w-32 rounded-full bg-success/10 blur-3xl" />
       <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
@@ -36,7 +36,7 @@ export const WelcomeCard = () => {
           </p>
         </div>
 
-        <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/80 shadow-sm border border-white/60">
+        <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-surface border border-border/60 shadow-sm">
           <Sparkles className="w-7 h-7 text-primary" />
         </div>
       </div>

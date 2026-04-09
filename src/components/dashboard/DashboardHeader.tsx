@@ -7,10 +7,23 @@ import { TrendingUp, LayoutGrid, Download } from 'lucide-react';
 
 interface DashboardHeaderProps {
   onExport?: () => void;
+  stats?: {
+    totalTasks: number;
+    completionRate: number;
+    avgProductivity: number;
+    bestStreak: number;
+  };
 }
 
-export const DashboardHeader = ({ onExport }: DashboardHeaderProps) => {
+export const DashboardHeader = ({ onExport, stats }: DashboardHeaderProps) => {
   const { user } = useAuth();
+
+  const displayStats = [
+    { label: 'Total Tasks', value: stats ? String(stats.totalTasks) : '—' },
+    { label: 'Completion Rate', value: stats ? `${stats.completionRate}%` : '—' },
+    { label: 'Avg. Productivity', value: stats ? stats.avgProductivity.toFixed(1) : '—' },
+    { label: 'Best Streak', value: stats ? `${stats.bestStreak}d` : '—' },
+  ];
 
   return (
     <motion.div
@@ -25,7 +38,7 @@ export const DashboardHeader = ({ onExport }: DashboardHeaderProps) => {
             animate={{ rotate: [0, 5, -5, 0] }}
             transition={{ duration: 4, repeat: Infinity }}
           >
-            <TrendingUp className="w-7 h-7 text-white" />
+            <TrendingUp className="w-7 h-7 text-primary-foreground" />
           </motion.div>
           <div>
             <h1 className="text-2xl font-display font-bold text-foreground">Analytics Dashboard</h1>
@@ -51,18 +64,11 @@ export const DashboardHeader = ({ onExport }: DashboardHeaderProps) => {
         </div>
       </div>
 
-      {/* Quick Stats Bar */}
       <div className="grid grid-cols-4 gap-3 mt-5 pt-5 border-t border-border/30">
-        {[
-          { label: 'Total Tasks', value: '247', change: '+12%' },
-          { label: 'Completion Rate', value: '89%', change: '+5%' },
-          { label: 'Avg. Productivity', value: '7.8', change: '+0.3' },
-          { label: 'Best Streak', value: '14d', change: 'Record!' },
-        ].map((stat, idx) => (
+        {displayStats.map((stat) => (
           <div key={stat.label} className="text-center">
             <p className="text-xl font-bold text-foreground">{stat.value}</p>
             <p className="text-xs text-muted-foreground">{stat.label}</p>
-            <span className="text-[10px] text-success">{stat.change}</span>
           </div>
         ))}
       </div>

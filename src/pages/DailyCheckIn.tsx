@@ -116,31 +116,42 @@ const DailyCheckInPage = () => {
 
       if (error) throw error;
 
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
       if (data) {
         setFormData(prev => ({
           ...prev,
           wakeUpTime: data.wakeUpTime || prev.wakeUpTime,
           sleepTime: data.sleepTime || prev.sleepTime,
-          phoneUsage: data.phoneUsage || prev.phoneUsage,
+          phoneUsage: data.phoneUsage ?? prev.phoneUsage,
           mood: data.mood || prev.mood,
           energy: data.energy || prev.energy,
           stress: data.stress || prev.stress,
-          waterIntake: data.waterIntake || prev.waterIntake,
-          exercise: data.exercise !== null ? data.exercise : prev.exercise,
+          waterIntake: data.waterIntake ?? prev.waterIntake,
+          exercise: data.exercise != null ? data.exercise : prev.exercise,
           exerciseDuration: data.exerciseDuration || prev.exerciseDuration,
           notes: data.notes || prev.notes,
         }));
+
+        const parts: string[] = ['Check-in fields auto-filled.'];
+        if (data.tasksCreated > 0) {
+          parts.push(`${data.tasksCreated} task${data.tasksCreated > 1 ? 's' : ''} created.`);
+        }
+        if (data.moodEntry) parts.push('Mood logged.');
+        if (data.energyEntry) parts.push('Energy logged.');
         
-        toast.success('AI parsed your log!', {
-          description: 'We\'ve filled in the details for you. Please review and complete.',
-        });
+        toast.success('AI parsed your day!', { description: parts.join(' ') });
         
         const notesIdx = allQuestions.findIndex(q => q.id === 'notes');
         if (notesIdx !== -1) setCurrentStep(notesIdx);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Quick log error:', err);
-      toast.error('Could not parse your log automatically.');
+      const message = err?.message || 'Could not parse your log automatically.';
+      toast.error(message);
     } finally {
       setIsParsing(false);
     }
